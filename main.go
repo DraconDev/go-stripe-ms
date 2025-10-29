@@ -21,6 +21,7 @@ type PaymentResponse struct {
 
 func main() {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+	strite.s
 
 	http.HandleFunc("/create-payment-intent", createPaymentIntent)
 	http.HandleFunc("/create-test-payment-intent", createTestPaymentIntent)
