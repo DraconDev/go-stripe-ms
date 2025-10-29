@@ -30,4 +30,18 @@ else
     echo "Response: $PAYMENT_RESPONSE"
 fi
 
+# Test test payment intent creation
+echo "3. Testing test payment intent creation..."
+TEST_PAYMENT_RESPONSE=$(curl -s -X POST http://localhost:8080/create-test-payment-intent \
+    -H "Content-Type: application/json" \
+    -d '{"amount": 1000, "currency": "usd"}')
+
+if echo "$TEST_PAYMENT_RESPONSE" | grep -q "client_secret"; then
+    echo "✓ Test payment intent creation passed"
+    echo "Response: $TEST_PAYMENT_RESPONSE"
+else
+    echo "✗ Test payment intent creation failed"
+    echo "Response: $TEST_PAYMENT_RESPONSE"
+fi
+
 echo "Testing complete!"
