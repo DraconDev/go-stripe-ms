@@ -79,9 +79,7 @@ func createTestPaymentIntent(w http.ResponseWriter, r *http.Request) {
 		Amount:   stripe.Int64(req.Amount),
 		Currency: stripe.String(req.Currency),
 		// Additional test-specific parameters can be added here
-		Metadata: map[string]string{
-			"test_mode": "true",
-		},
+		Description: stripe.String("Test payment intent"),
 	}
 
 	pi, err := paymentintent.New(params)
