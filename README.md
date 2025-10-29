@@ -11,7 +11,8 @@ A simple Go microservice for handling Stripe payments using Payment Intents.
 
 ## Prerequisites
 
-- Go 1.21+
+- Go 1.21
+- Docker (optional, for containerized deployment)
 - Stripe account and secret key
 
 ## Setup
