@@ -5,6 +5,6 @@ services:
     build: .
     ports:
       - "8080:8080"
-    env_file:
-      - .env
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
     restart: unless-stopped
