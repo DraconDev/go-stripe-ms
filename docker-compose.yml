@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  stripe-ms:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    restart: unless-stopped
