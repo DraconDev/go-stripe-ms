@@ -23,6 +23,7 @@ func main() {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	http.HandleFunc("/create-payment-intent", createPaymentIntent)
+	http.HandleFunc("/create-test-payment-intent", createTestPaymentIntent)
 	http.HandleFunc("/health", healthCheck)
 
 	log.Println("Server starting on :8080")
