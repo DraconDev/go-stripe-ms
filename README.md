@@ -45,7 +45,26 @@ docker-compose up --build
 
 ### POST /create-payment-intent
 
-Creates a new Stripe Payment Intent.
+Creates a new Stripe Payment Intent for live payments.
+
+**Request Body:**
+```json
+{
+  "amount": 1000,
+  "currency": "usd"
+}
+```
+
+**Response:**
+```json
+{
+  "client_secret": "pi_..."
+}
+```
+
+### POST /create-test-payment-intent
+
+Creates a new Stripe Payment Intent for testing (works with test keys only).
 
 **Request Body:**
 ```json
