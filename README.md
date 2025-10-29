@@ -18,13 +18,19 @@ A simple Go microservice for handling Stripe payments using Payment Intents.
 ## Setup
 
 1. Clone the repository
-2. Set your Stripe secret key as an environment variable:
+2. Copy the environment file and set your Stripe secret key:
    ```bash
-   export STRIPE_SECRET_KEY=sk_test_...
+   cp .env.example .env
+   # Edit .env and replace with your actual Stripe secret key
    ```
 3. Run the service:
    ```bash
    go run main.go
+   ```
+
+   Or with Docker Compose:
+   ```bash
+   docker-compose up --build
    ```
 
 ## Docker
