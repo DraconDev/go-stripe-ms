@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"billing-service/internal/database"
-	billing "billing-service/proto/billing"
+	"billing_service/internal/database"
+	billing "billing_service/proto/billing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/metadata"
