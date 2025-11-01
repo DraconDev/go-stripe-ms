@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/dracondev/go-stripe-ms/internal/database"
-	billing "github.com/dracondev/go-stripe-ms/proto/billing"
+	"./internal/database"
+	billing "./proto/billing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/metadata"
