@@ -1,4 +1,4 @@
-module github.com/dracondev/go-stripe-ms
+module billing-service
 
 go 1.21
 
