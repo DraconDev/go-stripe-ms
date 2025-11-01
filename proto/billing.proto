@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package billing;
 
-option go_package = "github.com/dracondev/go-stripe-ms/proto/billing";
+option go_package = "billing-service/proto/billing";
 
 import "google/protobuf/timestamp.proto";
 
