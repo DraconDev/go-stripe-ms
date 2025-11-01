@@ -20,7 +20,7 @@ Based on the AI Master Prompt specification, transform this into a production-re
 - [x] Update go.mod with required dependencies (grpc, pgx, stripe-go)
 - [x] Create proper directory structure (proto/, internal/, cmd/)
 - [x] Generate proto/billing.proto with BillingService contract
-- [ ] Update docker-compose.yml for database and services
+- [x] Update docker-compose.yml for database and services
 
 ### Phase 2: Core Infrastructure
 
