@@ -1,4 +1,4 @@
-module billing-service
+module billing_service
 
 go 1.22
 
