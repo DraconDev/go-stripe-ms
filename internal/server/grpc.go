@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"billing_service/internal/database"
-	billing "billing_service/proto/billing"
+	billing "billing_service/proto/billing_service/proto/billing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/metadata"
