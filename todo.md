@@ -45,6 +45,8 @@ Based on the AI Master Prompt specification, transform this into a production-re
 
 ### Phase 5: Testing & Validation
 
+- [ ] Fix unused variable error
+- [x] Add dummy environment keys for database and Stripe
 - [ ] Test gRPC service endpoints
 - [ ] Verify webhook handling
 - [ ] Test database operations
