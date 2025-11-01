@@ -1,7 +1,5 @@
 module github.com/dracondev/go-stripe-ms
 
-replace github.com/dracondev/go-stripe-ms => ./
-
 go 1.21
 
 require (
