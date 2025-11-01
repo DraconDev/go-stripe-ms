@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package billing;
+
+option go_package = "github.com/dracondev/go-stripe-ms/internal/proto/billing";
+
+import "google/protobuf/timestamp.proto";
+
+// BillingService provides subscription management functionality
+service BillingService {
+  // CreateSubscriptionCheckout initiates a Stripe subscription checkout session
+  rpc CreateSubscriptionCheckout(CreateSubscriptionCheckoutRequest) returns (CreateSubscriptionCheckoutResponse);
+  
+  // GetSubscriptionStatus retrieves the current status of a user's subscription
+  rpc GetSubscriptionStatus(GetSubscriptionStatusRequest) returns (GetSubscriptionStatusResponse);
+  
+  // CreateCustomerPortal creates a Stripe customer portal session for subscription management
+  rpc CreateCustomerPortal(CreateCustomerPortalRequest) returns (CreateCustomerPortalResponse);
+}
+
+// Request to create a subscription checkout session
+message CreateSubscriptionCheckoutRequest {
+  string user_id = 1;      // User identifier
+  string product_id = 2;   // Stripe product identifier
+  string price_id = 3;     // Stripe price identifier
+  string success_url = 4;  // URL to redirect on successful checkout
+  string cancel_url = 5;   // URL to redirect on cancelled checkout
+}
+
+// Response containing checkout session details
+message CreateSubscriptionCheckoutResponse {
+  string checkout_session_id = 1;  // Stripe checkout session ID
+  string checkout_url = 2;         // URL to complete the checkout
+}
+
+// Request to get subscription status
+message GetSubscriptionStatusRequest {
+  string user_id = 1;    // User identifier
+  string product_id = 2; // Product identifier
+}
+
+// Response containing subscription status information
+message GetSubscriptionStatusResponse {
+  string subscription_id = 1;      // Stripe subscription ID
+  string status = 2;               // Subscription status (active, cancelled, past_due, etc.)
+  string customer_id = 3;          // Stripe customer ID
+  google.protobuf.Timestamp current_period_end = 4;  // Current period end timestamp
+  bool exists = 5;                 // Whether a subscription exists
+}
+
+// Request to create customer portal session
+message CreateCustomerPortalRequest {
+  string user_id = 1;        // User identifier
+  string return_url = 2;     // URL to return to after portal session
+}
+
+// Response containing portal session details
+message CreateCustomerPortalResponse {
+  string portal_session_id = 1;  // Stripe portal session ID
+  string portal_url = 2;         // URL to access the customer portal
+}
