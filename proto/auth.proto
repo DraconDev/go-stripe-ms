@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-option go_package = "github.com/dracondev/go-stripe-ms/internal/proto/auth";
+option go_package = "billing-service/internal/proto/auth";
 
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
