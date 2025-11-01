@@ -9,5 +9,3 @@ require (
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.1
 )
-
-replace github.com/dracondev/go-stripe-ms/proto/billing => ./proto/billing
