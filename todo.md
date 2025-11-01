@@ -13,16 +13,16 @@ Based on the AI Master Prompt specification, transform this into a production-re
 ## Implementation Checklist
 
 ### Phase 1: Project Structure & Dependencies
-- [ ] Update go.mod with required dependencies (grpc, pgx, stripe-go)
-- [ ] Create proper directory structure (proto/, internal/, cmd/)
-- [ ] Generate proto/billing.proto with BillingService contract
+- [x] Update go.mod with required dependencies (grpc, pgx, stripe-go)
+- [x] Create proper directory structure (proto/, internal/, cmd/)
+- [x] Generate proto/billing.proto with BillingService contract
 - [ ] Update docker-compose.yml for database and services
 
 ### Phase 2: Core Infrastructure
-- [ ] Implement internal/config/config.go with environment variable loading
-- [ ] Create internal/database/models.go with Customer and Subscription structs
-- [ ] Implement internal/database/repo.go with pgx-based data access layer
-- [ ] Create internal/clients/cerber.go for Cerberus service integration
+- [x] Implement internal/config/config.go with environment variable loading
+- [x] Create internal/database/models.go with Customer and Subscription structs
+- [x] Implement internal/database/repo.go with pgx-based data access layer
+- [x] Remove unnecessary Cerberus client (separate microservice)
 
 ### Phase 3: Business Logic
 - [ ] Implement internal/server/grpc.go with BillingService handlers
