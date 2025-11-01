@@ -80,7 +80,7 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 	log.Printf("CreateCustomerPortal called for user: %s", req.UserId)
 
 	// Get customer's Stripe ID from database
-	customer, err := s.db.GetCustomerByStripeCustomerID(ctx, req.UserId)
+	customer, err := s.db.GetCustomerByStripeID(ctx, req.UserId)
 	if err != nil {
 		log.Printf("Failed to get customer: %v", err)
 		return nil, status.Error(codes.NotFound, "customer not found")
