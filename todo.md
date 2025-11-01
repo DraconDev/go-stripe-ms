@@ -32,7 +32,7 @@ Based on the AI Master Prompt specification, transform this into a production-re
 ### Phase 3: Business Logic
 
 - [ ] Implement internal/server/grpc.go with BillingService handlers
-- [ ] Create internal/webhooks/stripe.go with webhook event handling
+- [x] Create internal/webhooks/stripe.go with webhook event handling
 - [ ] Implement subscription management logic
 - [ ] Add integration with Hermes notification service
 
