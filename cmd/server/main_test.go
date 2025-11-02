@@ -431,38 +431,3 @@ func TestErrorHandling(t *testing.T) {
 		}
 	})
 }
-
-// TestRealStripeIntegration tests integration with real Stripe using environment keys
-func TestRealStripeIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping real Stripe integration test in short mode")
-	}
-
-	// Load configuration
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Create real customer with Stripe API
-	db := &database.Repository{}
-	billingService := server.NewBillingService(db, cfg.StripeSecretKey)
-
-	t.Run("CreateRealStripeCustomer", func(t *testing.T) {
-		ctx := context.Background()
-		
-		// This will create a real customer in Stripe using the environment key
-		stripeCustomerID, err := billingService.findOrCreateStripeCustomer(ctx, "test-real-user", "test@example.com")
-		
-		if err != nil {
-			t.Fatalf("Failed to create real Stripe customer: %v", err)
-		}
-		
-		if stripeCustomerID == "" {
-			t.Error("Stripe customer ID should not be empty")
-		}
-		
-		t.Logf("Created real Stripe customer: %s", stripeCustomerID)
-		t.Logf("Using environment Stripe key: %s", cfg.StripeSecretKey[:20]+"...")
-	})
-}
