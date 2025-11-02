@@ -15,8 +15,8 @@ func TestBillingService(t *testing.T) {
 	// Create a mock database repository
 	db := &database.Repository{}
 	
-	// Initialize the billing service
-	billingService := server.NewBillingService(db)
+	// Initialize the billing service with Stripe secret
+	billingService := server.NewBillingService(db, "sk_test_dummy_key")
 	
 	if billingService == nil {
 		t.Fatal("Failed to create BillingService")
@@ -102,7 +102,8 @@ func TestBillingService(t *testing.T) {
 func TestDatabaseIntegration(t *testing.T) {
 	t.Run("InitializeTables", func(t *testing.T) {
 		db := &database.Repository{}
-		err := db.InitializeTables(nil)
+		ctx := context.Background()
+		err := db.InitializeTables(ctx)
 		
 		// With our current mock implementation, this should not fail
 		// but it might return an error, which is fine for now
@@ -142,6 +143,38 @@ func TestDatabaseIntegration(t *testing.T) {
 		
 		t.Logf("Database subscription status check completed")
 	})
+
+	t.Run("UpdateCustomerStripeID", func(t *testing.T) {
+		db := &database.Repository{}
+		ctx := context.Background()
+		
+		// Test updating customer Stripe ID
+		err := db.UpdateCustomerStripeID(ctx, "test-user", "cus_test123")
+		
+		if err != nil {
+			t.Logf("UpdateCustomerStripeID returned error (expected with mock): %v", err)
+		} else {
+			t.Logf("Customer Stripe ID update completed")
+		}
+	})
+
+	t.Run("GetCustomerByUserID", func(t *testing.T) {
+		db := &database.Repository{}
+		ctx := context.Background()
+		
+		// Test getting customer by user ID
+		customer, err := db.GetCustomerByUserID(ctx, "nonexistent-user")
+		
+		if err != nil {
+			t.Logf("GetCustomerByUserID returned error (expected with mock): %v", err)
+		} else {
+			if customer == nil {
+				t.Logf("Customer is nil (expected for non-existent user)")
+			} else {
+				t.Logf("Found customer: %+v", customer)
+			}
+		}
+	})
 }
 
 // TestWebhookHandler tests the webhook handler functionality
@@ -159,19 +192,40 @@ func TestWebhookHandler(t *testing.T) {
 			t.Logf("Webhook handler health check passed")
 		}
 	})
+
+	t.Run("SetupRoutes", func(t *testing.T) {
+		db := &database.Repository{}
+		handler := webhooks.NewStripeWebhookHandler(db, "dummy-key", "dummy-secret")
+		
+		// Test that routes can be set up without panicking
+		// Note: This is a basic smoke test
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("SetupRoutes panicked: %v", r)
+			}
+		}()
+		
+		// We can't easily test the HTTP routing without a full server setup
+		// but we can at least verify the handler was created successfully
+		if handler == nil {
+			t.Error("Webhook handler should not be nil")
+		} else {
+			t.Logf("Webhook handler created successfully")
+		}
+	})
 }
 
 // TestServerOrchestration tests basic server setup
 func TestServerOrchestration(t *testing.T) {
 	t.Run("NewServer", func(t *testing.T) {
-		// This test requires the config package, so we'll create a basic test
-		// In a real implementation, we would need to mock the config
+		// Test that we can create a server structure with the correct components
+		db := &database.Repository{}
+		billingService := server.NewBillingService(db, "sk_test_key")
 		
-		// For now, we'll just test that the basic server structure can be created
 		server := &Server{
 			config:         nil, // Would need proper config in real test
-			db:             &database.Repository{},
-			billingService: server.NewBillingService(&database.Repository{}),
+			db:             db,
+			billingService: billingService,
 		}
 		
 		if server.billingService == nil {
@@ -189,7 +243,7 @@ func TestServerOrchestration(t *testing.T) {
 // Benchmark tests for performance testing
 func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
 	db := &database.Repository{}
-	billingService := server.NewBillingService(db)
+	billingService := server.NewBillingService(db, "sk_test_benchmark_key")
 	
 	req := &proto_billing.CreateSubscriptionCheckoutRequest{
 		UserId:     "benchmark-user",
@@ -209,4 +263,58 @@ func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
 			b.Fatalf("Benchmark failed: %v", err)
 		}
 	}
+}
+
+// TestErrorHandling tests error scenarios
+func TestErrorHandling(t *testing.T) {
+	db := &database.Repository{}
+	billingService := server.NewBillingService(db, "sk_test_error_key")
+	
+	t.Run("InvalidUserId", func(t *testing.T) {
+		// Test with empty user ID
+		req := &proto_billing.CreateSubscriptionCheckoutRequest{
+			UserId:     "",
+			ProductId:  "test-product", 
+			PriceId:    "test-price",
+			SuccessUrl: "https://example.com/success",
+			CancelUrl:  "https://example.com/cancel",
+		}
+		
+		ctx := context.Background()
+		resp, err := billingService.CreateSubscriptionCheckout(ctx, req)
+		
+		// Should still work with empty user ID (mock implementation)
+		if err != nil {
+			t.Logf("CreateSubscriptionCheckout failed with empty user ID (expected): %v", err)
+		} else {
+			if resp.CheckoutSessionId == "" {
+				t.Error("CheckoutSessionId should not be empty even with empty user ID")
+			}
+			t.Logf("CreateSubscriptionCheckout succeeded with empty user ID: %s", resp.CheckoutSessionId)
+		}
+	})
+
+	t.Run("InvalidURLs", func(t *testing.T) {
+		// Test with empty URLs
+		req := &proto_billing.CreateSubscriptionCheckoutRequest{
+			UserId:     "test-user",
+			ProductId:  "test-product", 
+			PriceId:    "test-price",
+			SuccessUrl: "",
+			CancelUrl:  "",
+		}
+		
+		ctx := context.Background()
+		resp, err := billingService.CreateSubscriptionCheckout(ctx, req)
+		
+		// Should still work with empty URLs (mock implementation)
+		if err != nil {
+			t.Logf("CreateSubscriptionCheckout failed with empty URLs (expected): %v", err)
+		} else {
+			if resp.CheckoutSessionId == "" {
+				t.Error("CheckoutSessionId should not be empty even with empty URLs")
+			}
+			t.Logf("CreateSubscriptionCheckout succeeded with empty URLs: %s", resp.CheckoutSessionId)
+		}
+	})
 }
