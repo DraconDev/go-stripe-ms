@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ func NewStripeWebhookHandler(db *database.Repository, stripeSecret, webhookSecre
 
 // HandleWebhook processes incoming Stripe webhook events
 func (h *StripeWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context() // Use request context for proper cancellation and timeout handling
 	log.Println("Received Stripe webhook event")
 
 	// Set content type for Stripe
@@ -70,7 +72,7 @@ func (h *StripeWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	
-	h.processEvent(w, event)
+	h.processEvent(ctx, w, event)
 }
 
 // verifySignature is a simplified signature verification for development
@@ -81,16 +83,20 @@ func (h *StripeWebhookHandler) verifySignature(body []byte, signature string) bo
 }
 
 // processEvent handles different types of Stripe events
-func (h *StripeWebhookHandler) processEvent(w http.ResponseWriter, event stripe.Event) {
+func (h *StripeWebhookHandler) processEvent(ctx context.Context, w http.ResponseWriter, event stripe.Event) {
 	log.Printf("Processing event type: %s", event.Type)
+
+	// WithTimeout ensures we have sufficient time for database operations
+	processingCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	switch event.Type {
 	case "customer.subscription.created":
-		h.handleCustomerSubscriptionCreated(event)
+		h.handleCustomerSubscriptionCreated(processingCtx, event)
 	case "customer.subscription.updated":
-		h.handleCustomerSubscriptionUpdated(event)
+		h.handleCustomerSubscriptionUpdated(processingCtx, event)
 	case "customer.subscription.deleted":
-		h.handleCustomerSubscriptionDeleted(event)
+		h.handleCustomerSubscriptionDeleted(processingCtx, event)
 	case "invoice.payment_succeeded":
 		h.handleInvoicePaymentSucceeded(event)
 	case "invoice.payment_failed":
@@ -107,7 +113,7 @@ func (h *StripeWebhookHandler) processEvent(w http.ResponseWriter, event stripe.
 }
 
 // handleCustomerSubscriptionCreated processes subscription creation events
-func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(event stripe.Event) {
+func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Context, event stripe.Event) {
 	var subscription struct {
 		ID               string                 `json:"id"`
 		Customer         struct{ ID string }   `json:"customer"`
@@ -132,7 +138,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(event stripe.Ev
 	log.Printf("Subscription created: %s for customer: %s", subscription.ID, subscription.Customer.ID)
 	
 	// Get customer details
-	customer, err := h.getCustomerByStripeID(subscription.Customer.ID)
+	customer, err := h.getCustomerByStripeID(ctx, subscription.Customer.ID)
 	if err != nil {
 		log.Printf("Customer not found: %s", subscription.Customer.ID)
 		return
@@ -147,7 +153,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(event stripe.Ev
 
 	// Create subscription in database
 	err = h.db.CreateSubscription(
-		nil, // Context would be passed from HTTP handler
+		ctx,
 		subscription.Customer.ID,
 		subscription.ID,
 		productID,
@@ -166,7 +172,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(event stripe.Ev
 }
 
 // handleCustomerSubscriptionUpdated processes subscription update events
-func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(event stripe.Event) {
+func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(ctx context.Context, event stripe.Event) {
 	var subscription struct {
 		ID               string `json:"id"`
 		Status           string `json:"status"`
@@ -180,8 +186,12 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(event stripe.Ev
 
 	log.Printf("Subscription updated: %s, status: %s", subscription.ID, subscription.Status)
 
+	// Update subscription status with timeout
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	
 	err := h.db.UpdateSubscriptionStatus(
-		nil, // Context would be passed from HTTP handler
+		timeoutCtx,
 		subscription.ID,
 		subscription.Status,
 		time.Unix(subscription.CurrentPeriodEnd, 0),
@@ -195,7 +205,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(event stripe.Ev
 }
 
 // handleCustomerSubscriptionDeleted processes subscription deletion events
-func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(event stripe.Event) {
+func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(ctx context.Context, event stripe.Event) {
 	var subscription struct {
 		ID               string `json:"id"`
 		CurrentPeriodEnd int64  `json:"current_period_end"`
@@ -208,9 +218,12 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(event stripe.Ev
 
 	log.Printf("Subscription deleted: %s", subscription.ID)
 
-	// Update subscription status to canceled
+	// Update subscription status to canceled with timeout
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	
 	err := h.db.UpdateSubscriptionStatus(
-		nil, // Context would be passed from HTTP handler
+		timeoutCtx,
 		subscription.ID,
 		"canceled",
 		time.Unix(subscription.CurrentPeriodEnd, 0),
@@ -272,8 +285,8 @@ func (h *StripeWebhookHandler) handlePaymentMethodAttached(event stripe.Event) {
 }
 
 // getCustomerByStripeID retrieves customer from database by Stripe customer ID
-func (h *StripeWebhookHandler) getCustomerByStripeID(stripeCustomerID string) (*database.Customer, error) {
-	return h.db.GetCustomerByStripeID(nil, stripeCustomerID) // Context would be passed from HTTP handler
+func (h *StripeWebhookHandler) getCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*database.Customer, error) {
+	return h.db.GetCustomerByStripeID(ctx, stripeCustomerID)
 }
 
 // SetupRoutes sets up the webhook routes
@@ -283,8 +296,11 @@ func (h *StripeWebhookHandler) SetupRoutes(mux *http.ServeMux) {
 
 // HealthCheck returns the health status of the webhook handler
 func (h *StripeWebhookHandler) HealthCheck() error {
-	// Test database connection
-	if err := h.db.InitializeTables(nil); err != nil {
+	// Test database connection with a timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	if err := h.db.InitializeTables(ctx); err != nil {
 		return fmt.Errorf("database health check failed: %w", err)
 	}
 	return nil
