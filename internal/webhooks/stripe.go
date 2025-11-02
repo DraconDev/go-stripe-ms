@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"billing_service/internal/database"
+	"styx/internal/database"
 	"github.com/stripe/stripe-go/v72"
 )
 
