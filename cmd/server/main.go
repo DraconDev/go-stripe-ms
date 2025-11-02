@@ -245,7 +245,7 @@ func main() {
 	// Print configuration (remove sensitive data)
 	log.Printf("Configuration loaded:")
 	log.Printf("  HTTP Port: %d", cfg.HTTPPort)
-	log.Printf("  gRPC Port: %d", s.config.GRPCPort)
+	log.Printf("  gRPC Port: %d", cfg.GRPCPort)
 	log.Printf("  Log Level: %s", cfg.LogLevel)
 
 	// Create and run server
