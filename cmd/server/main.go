@@ -42,7 +42,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	}
 
 	// Initialize billing service
-	billingService := server.NewBillingService(db)
+	billingService := server.NewBillingService(db, cfg.StripeSecretKey)
 
 	// Initialize webhook handler
 	webhookHandler := webhooks.NewStripeWebhookHandler(db, cfg.StripeSecretKey, cfg.StripeWebhookSecret)
