@@ -9,8 +9,8 @@ import (
 	"styx/internal/database"
 	billing "styx/proto/billing_service/proto/billing"
 	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/billingportalsession"
-	"github.com/stripe/stripe-go/v72/checkout"
+	billingportal_session "github.com/stripe/stripe-go/v72/billingportal"
+	checkout_session "github.com/stripe/stripe-go/v72/checkout"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
 	"google.golang.org/grpc/codes"
@@ -72,7 +72,7 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	checkoutParams.AddMetadata("user_id", req.UserId)
 	checkoutParams.AddMetadata("product_id", req.ProductId)
 
-	session, err := checkout.NewSession(checkoutParams)
+	session, err := checkout_session.New(checkoutParams)
 	if err != nil {
 		log.Printf("Failed to create Stripe checkout session: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create checkout session")
@@ -147,7 +147,7 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 		ReturnURL: stripe.String(req.ReturnUrl),
 	}
 
-	portalSession, err := billingportalsession.New(portalParams)
+	portalSession, err := billingportal_session.New(portalParams)
 	if err != nil {
 		log.Printf("Failed to create customer portal session: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create portal session")
