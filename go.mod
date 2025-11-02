@@ -1,4 +1,4 @@
-module billing_service
+module styx
 
 go 1.22
 
