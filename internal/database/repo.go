@@ -19,6 +19,11 @@ func NewRepository(db *pgx.Conn) *Repository {
 	return &Repository{db: db}
 }
 
+// isMock returns true if this is a mock repository (no database connection)
+func (r *Repository) isMock() bool {
+	return r.db == nil
+}
+
 // FindOrCreateStripeCustomer finds an existing customer or creates a new one
 func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error) {
 	// First, try to find existing customer
