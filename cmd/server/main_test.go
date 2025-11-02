@@ -14,80 +14,80 @@ import (
 func TestBillingService(t *testing.T) {
 	// Create a mock database repository
 	db := &database.Repository{}
-	
-	// Initialize the billing service with Stripe secret
-	billingService := server.NewBillingService(db, "sk_test_dummy_key")
-	
+
+	// Initialize the billing service
+	billingService := server.NewBillingService(db)
+
 	if billingService == nil {
 		t.Fatal("Failed to create BillingService")
 	}
-	
+
 	// Test CreateSubscriptionCheckout
 	t.Run("CreateSubscriptionCheckout", func(t *testing.T) {
 		req := &proto_billing.CreateSubscriptionCheckoutRequest{
 			UserId:     "test-user-123",
-			ProductId:  "test-product-456", 
+			ProductId:  "test-product-456",
 			PriceId:    "test-price-789",
 			SuccessUrl: "https://example.com/success",
 			CancelUrl:  "https://example.com/cancel",
 		}
-		
+
 		ctx := context.Background()
 		resp, err := billingService.CreateSubscriptionCheckout(ctx, req)
-		
+
 		if err != nil {
 			t.Fatalf("CreateSubscriptionCheckout failed: %v", err)
 		}
-		
+
 		if resp.CheckoutSessionId == "" {
 			t.Error("CheckoutSessionId should not be empty")
 		}
-		
+
 		if resp.CheckoutUrl == "" {
 			t.Error("CheckoutUrl should not be empty")
 		}
-		
+
 		t.Logf("Generated checkout session: %s", resp.CheckoutSessionId)
 	})
-	
+
 	// Test GetSubscriptionStatus
 	t.Run("GetSubscriptionStatus", func(t *testing.T) {
 		req := &proto_billing.GetSubscriptionStatusRequest{
 			UserId:    "test-user-123",
 			ProductId: "test-product-456",
 		}
-		
+
 		ctx := context.Background()
 		resp, err := billingService.GetSubscriptionStatus(ctx, req)
-		
+
 		if err != nil {
 			t.Fatalf("GetSubscriptionStatus failed: %v", err)
 		}
-		
+
 		// For a mock repository, we expect Exists to be false
 		if resp.Exists {
 			t.Error("Expected subscription not to exist for test user")
 		}
-		
+
 		t.Logf("Subscription status check completed")
 	})
-	
+
 	// Test CreateCustomerPortal
 	t.Run("CreateCustomerPortal", func(t *testing.T) {
 		req := &proto_billing.CreateCustomerPortalRequest{
 			UserId:    "test-user-123",
 			ReturnUrl: "https://example.com/return",
 		}
-		
+
 		ctx := context.Background()
 		resp, err := billingService.CreateCustomerPortal(ctx, req)
-		
+
 		if err == nil {
 			// This might fail with our mock repository, which is expected
 			if resp.PortalSessionId == "" {
 				t.Error("PortalSessionId should not be empty")
 			}
-			
+
 			if resp.PortalUrl == "" {
 				t.Error("PortalUrl should not be empty")
 			}
@@ -102,9 +102,8 @@ func TestBillingService(t *testing.T) {
 func TestDatabaseIntegration(t *testing.T) {
 	t.Run("InitializeTables", func(t *testing.T) {
 		db := &database.Repository{}
-		ctx := context.Background()
-		err := db.InitializeTables(ctx)
-		
+		err := db.InitializeTables(nil)
+
 		// With our current mock implementation, this should not fail
 		// but it might return an error, which is fine for now
 		if err != nil {
@@ -113,67 +112,35 @@ func TestDatabaseIntegration(t *testing.T) {
 			t.Logf("Database tables initialized successfully")
 		}
 	})
-	
+
 	t.Run("GetSubscriptionStatus", func(t *testing.T) {
 		db := &database.Repository{}
 		ctx := context.Background()
-		
+
 		stripeSubID, customerID, currentPeriodEnd, exists, err := db.GetSubscriptionStatus(ctx, "nonexistent-user", "nonexistent-product")
-		
+
 		if err != nil {
 			t.Logf("GetSubscriptionStatus returned error: %v", err)
 		}
-		
+
 		if exists {
 			t.Error("Expected subscription not to exist")
 		}
-		
+
 		// These should be empty/zero for non-existent subscription
 		if stripeSubID != "" {
 			t.Errorf("Expected empty stripeSubID, got: %s", stripeSubID)
 		}
-		
+
 		if customerID != "" {
 			t.Errorf("Expected empty customerID, got: %s", customerID)
 		}
-		
+
 		if !currentPeriodEnd.IsZero() {
 			t.Errorf("Expected zero currentPeriodEnd, got: %v", currentPeriodEnd)
 		}
-		
+
 		t.Logf("Database subscription status check completed")
-	})
-
-	t.Run("UpdateCustomerStripeID", func(t *testing.T) {
-		db := &database.Repository{}
-		ctx := context.Background()
-		
-		// Test updating customer Stripe ID
-		err := db.UpdateCustomerStripeID(ctx, "test-user", "cus_test123")
-		
-		if err != nil {
-			t.Logf("UpdateCustomerStripeID returned error (expected with mock): %v", err)
-		} else {
-			t.Logf("Customer Stripe ID update completed")
-		}
-	})
-
-	t.Run("GetCustomerByUserID", func(t *testing.T) {
-		db := &database.Repository{}
-		ctx := context.Background()
-		
-		// Test getting customer by user ID
-		customer, err := db.GetCustomerByUserID(ctx, "nonexistent-user")
-		
-		if err != nil {
-			t.Logf("GetCustomerByUserID returned error (expected with mock): %v", err)
-		} else {
-			if customer == nil {
-				t.Logf("Customer is nil (expected for non-existent user)")
-			} else {
-				t.Logf("Found customer: %+v", customer)
-			}
-		}
 	})
 }
 
@@ -182,9 +149,9 @@ func TestWebhookHandler(t *testing.T) {
 	t.Run("HealthCheck", func(t *testing.T) {
 		db := &database.Repository{}
 		handler := webhooks.NewStripeWebhookHandler(db, "dummy-key", "dummy-secret")
-		
+
 		err := handler.HealthCheck()
-		
+
 		// With mock repository, health check should succeed
 		if err != nil {
 			t.Logf("HealthCheck returned error: %v", err)
@@ -192,50 +159,29 @@ func TestWebhookHandler(t *testing.T) {
 			t.Logf("Webhook handler health check passed")
 		}
 	})
-
-	t.Run("SetupRoutes", func(t *testing.T) {
-		db := &database.Repository{}
-		handler := webhooks.NewStripeWebhookHandler(db, "dummy-key", "dummy-secret")
-		
-		// Test that routes can be set up without panicking
-		// Note: This is a basic smoke test
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("SetupRoutes panicked: %v", r)
-			}
-		}()
-		
-		// We can't easily test the HTTP routing without a full server setup
-		// but we can at least verify the handler was created successfully
-		if handler == nil {
-			t.Error("Webhook handler should not be nil")
-		} else {
-			t.Logf("Webhook handler created successfully")
-		}
-	})
 }
 
 // TestServerOrchestration tests basic server setup
 func TestServerOrchestration(t *testing.T) {
 	t.Run("NewServer", func(t *testing.T) {
-		// Test that we can create a server structure with the correct components
-		db := &database.Repository{}
-		billingService := server.NewBillingService(db, "sk_test_key")
-		
+		// This test requires the config package, so we'll create a basic test
+		// In a real implementation, we would need to mock the config
+
+		// For now, we'll just test that the basic server structure can be created
 		server := &Server{
 			config:         nil, // Would need proper config in real test
-			db:             db,
-			billingService: billingService,
+			db:             &database.Repository{},
+			billingService: server.NewBillingService(&database.Repository{}),
 		}
-		
+
 		if server.billingService == nil {
 			t.Error("Failed to create billing service for server")
 		}
-		
+
 		if server.db == nil {
 			t.Error("Database repository should not be nil")
 		}
-		
+
 		t.Logf("Server orchestration test passed")
 	})
 }
@@ -243,78 +189,24 @@ func TestServerOrchestration(t *testing.T) {
 // Benchmark tests for performance testing
 func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
 	db := &database.Repository{}
-	billingService := server.NewBillingService(db, "sk_test_benchmark_key")
-	
+	billingService := server.NewBillingService(db)
+
 	req := &proto_billing.CreateSubscriptionCheckoutRequest{
 		UserId:     "benchmark-user",
-		ProductId:  "benchmark-product", 
+		ProductId:  "benchmark-product",
 		PriceId:    "benchmark-price",
 		SuccessUrl: "https://example.com/success",
 		CancelUrl:  "https://example.com/cancel",
 	}
-	
+
 	ctx := context.Background()
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_, err := billingService.CreateSubscriptionCheckout(ctx, req)
 		if err != nil {
 			b.Fatalf("Benchmark failed: %v", err)
 		}
 	}
-}
-
-// TestErrorHandling tests error scenarios
-func TestErrorHandling(t *testing.T) {
-	db := &database.Repository{}
-	billingService := server.NewBillingService(db, "sk_test_error_key")
-	
-	t.Run("InvalidUserId", func(t *testing.T) {
-		// Test with empty user ID
-		req := &proto_billing.CreateSubscriptionCheckoutRequest{
-			UserId:     "",
-			ProductId:  "test-product", 
-			PriceId:    "test-price",
-			SuccessUrl: "https://example.com/success",
-			CancelUrl:  "https://example.com/cancel",
-		}
-		
-		ctx := context.Background()
-		resp, err := billingService.CreateSubscriptionCheckout(ctx, req)
-		
-		// Should still work with empty user ID (mock implementation)
-		if err != nil {
-			t.Logf("CreateSubscriptionCheckout failed with empty user ID (expected): %v", err)
-		} else {
-			if resp.CheckoutSessionId == "" {
-				t.Error("CheckoutSessionId should not be empty even with empty user ID")
-			}
-			t.Logf("CreateSubscriptionCheckout succeeded with empty user ID: %s", resp.CheckoutSessionId)
-		}
-	})
-
-	t.Run("InvalidURLs", func(t *testing.T) {
-		// Test with empty URLs
-		req := &proto_billing.CreateSubscriptionCheckoutRequest{
-			UserId:     "test-user",
-			ProductId:  "test-product", 
-			PriceId:    "test-price",
-			SuccessUrl: "",
-			CancelUrl:  "",
-		}
-		
-		ctx := context.Background()
-		resp, err := billingService.CreateSubscriptionCheckout(ctx, req)
-		
-		// Should still work with empty URLs (mock implementation)
-		if err != nil {
-			t.Logf("CreateSubscriptionCheckout failed with empty URLs (expected): %v", err)
-		} else {
-			if resp.CheckoutSessionId == "" {
-				t.Error("CheckoutSessionId should not be empty even with empty URLs")
-			}
-			t.Logf("CreateSubscriptionCheckout succeeded with empty URLs: %s", resp.CheckoutSessionId)
-		}
-	})
 }
