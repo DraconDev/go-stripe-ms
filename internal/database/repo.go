@@ -26,12 +26,6 @@ func (r *Repository) isMock() bool {
 
 // FindOrCreateStripeCustomer finds an existing customer or creates a new one
 func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error) {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: returning mock customer ID for user %s", userID)
-		return "mock_customer_" + userID, nil
-	}
-
 	// First, try to find existing customer
 	var existingCustomerID string
 	err := r.db.QueryRow(ctx, `
@@ -39,7 +33,7 @@ func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, ema
 		FROM customers 
 		WHERE user_id = $1
 	`, userID).Scan(&existingCustomerID)
-	
+
 	if err == nil && existingCustomerID != "" {
 		log.Printf("Found existing customer for user %s: %s", userID, existingCustomerID)
 		return existingCustomerID, nil
@@ -65,12 +59,6 @@ func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, ema
 
 // UpdateCustomerStripeID updates the Stripe customer ID for an existing customer
 func (r *Repository) UpdateCustomerStripeID(ctx context.Context, userID, stripeCustomerID string) error {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: simulated customer ID update for user %s", userID)
-		return nil
-	}
-
 	_, err := r.db.Exec(ctx, `
 		UPDATE customers 
 		SET stripe_customer_id = $1, updated_at = $2
@@ -81,14 +69,6 @@ func (r *Repository) UpdateCustomerStripeID(ctx context.Context, userID, stripeC
 
 // GetSubscriptionStatus retrieves subscription status for a user/product
 func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productID string) (string, string, time.Time, bool, error) {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: returning mock subscription status for user %s, product %s", userID, productID)
-		// Return mock data for testing
-		mockTime := time.Now().Add(30 * 24 * time.Hour) // 30 days from now
-		return "mock_sub_" + userID, "active", mockTime, true, nil
-	}
-
 	row := r.db.QueryRow(ctx, `
 		SELECT 
 			stripe_subscription_id,
@@ -105,14 +85,8 @@ func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productI
 
 // CreateSubscription creates a new subscription record
 func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: simulated subscription creation for user %s", userID)
-		return nil
-	}
-
 	ID := uuid.New()
-	
+
 	// Get customer database ID
 	var customerDBID uuid.UUID
 	err := r.db.QueryRow(ctx, `
@@ -120,7 +94,7 @@ func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeS
 		FROM customers 
 		WHERE stripe_customer_id = $1
 	`, customerID).Scan(&customerDBID)
-	
+
 	if err != nil {
 		return err
 	}
@@ -144,12 +118,6 @@ func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeS
 
 // UpdateSubscriptionStatus updates subscription status and period end
 func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, stripeSubID, status string, periodEnd time.Time) error {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: simulated subscription status update for %s", stripeSubID)
-		return nil
-	}
-
 	_, err := r.db.Exec(ctx, `
 		UPDATE subscriptions 
 		SET status = $1, current_period_end = $2, updated_at = $3
@@ -161,19 +129,6 @@ func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, stripeSubID, 
 
 // GetCustomerByStripeID retrieves customer by Stripe customer ID
 func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error) {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: returning mock customer for %s", stripeCustomerID)
-		return &Customer{
-			ID:               "mock_customer_id",
-			UserID:           "mock_user",
-			Email:            "mock@example.com",
-			StripeCustomerID: stripeCustomerID,
-			CreatedAt:        time.Now(),
-			UpdatedAt:        time.Now(),
-		}, nil
-	}
-
 	return ScanCustomer(r.db.QueryRow(ctx, `
 		SELECT id, user_id, email, stripe_customer_id, created_at, updated_at
 		FROM customers 
@@ -183,24 +138,6 @@ func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID
 
 // GetSubscriptionByStripeID retrieves subscription by Stripe subscription ID
 func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error) {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Printf("Mock repository: returning mock subscription for %s", stripeSubID)
-		return &Subscription{
-			ID:                   "mock_sub_id",
-			CustomerID:           "mock_customer_id",
-			UserID:               "mock_user",
-			ProductID:            "mock_product",
-			PriceID:              "mock_price",
-			StripeSubscriptionID: stripeSubID,
-			Status:               "active",
-			CurrentPeriodStart:   time.Now(),
-			CurrentPeriodEnd:     time.Now().Add(30 * 24 * time.Hour),
-			CreatedAt:            time.Now(),
-			UpdatedAt:            time.Now(),
-		}, nil
-	}
-
 	return ScanSubscription(r.db.QueryRow(ctx, `
 		SELECT id, customer_id, user_id, product_id, price_id,
 			stripe_subscription_id, status, current_period_start, current_period_end,
@@ -212,12 +149,6 @@ func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID 
 
 // InitializeTables creates the necessary database tables
 func (r *Repository) InitializeTables(ctx context.Context) error {
-	// Return early if this is a mock repository
-	if r.isMock() {
-		log.Println("Mock database repository - skipping table initialization")
-		return nil
-	}
-	
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS customers (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -227,7 +158,7 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
-		
+
 		`CREATE TABLE IF NOT EXISTS subscriptions (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
@@ -242,7 +173,7 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			UNIQUE(user_id, product_id)
 		)`,
-		
+
 		`CREATE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_id ON customers(stripe_customer_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`,
