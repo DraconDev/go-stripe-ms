@@ -55,12 +55,12 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	}
 
 	// Create Stripe Checkout Session
-	sessionParams := &checkout.SessionParams{
+	checkoutParams := &stripe.CheckoutSessionParams{
 		Customer:        stripe.String(stripeCustomerID),
-		Mode:            stripe.String(string(stripe.CheckoutModeSubscription)),
+		Mode:            stripe.ModeSubscription,
 		SuccessURL:      stripe.String(req.SuccessUrl),
 		CancelURL:       stripe.String(req.CancelUrl),
-		LineItems: []*checkout.LineItemParams{
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(req.PriceId),
 				Quantity: stripe.Int64(1),
@@ -72,7 +72,7 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		},
 	}
 
-	session, err := checkout.New(sessionParams)
+	session, err := checkout.NewSession(checkoutParams)
 	if err != nil {
 		log.Printf("Failed to create Stripe checkout session: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create checkout session")
@@ -104,10 +104,7 @@ func (s *BillingService) GetSubscriptionStatus(ctx context.Context, req *billing
 	}
 
 	// Get current status from Stripe
-	subParams := &sub.SubParams{}
-	subParams.ID = stripeSubID
-
-	stripeSubscription, err := sub.Get(subParams)
+	stripeSubscription, err := sub.Get(stripeSubID, nil)
 	if err != nil {
 		log.Printf("Failed to get Stripe subscription %s: %v", stripeSubID, err)
 		// Return database status if Stripe call fails
@@ -145,7 +142,7 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 	}
 
 	// Create customer portal session
-	portalParams := &billingportalsession.Params{
+	portalParams := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(customer.StripeCustomerID),
 		ReturnURL: stripe.String(req.ReturnUrl),
 	}
@@ -174,7 +171,7 @@ func (s *BillingService) findOrCreateStripeCustomer(ctx context.Context, userID,
 	}
 
 	// Create new Stripe customer
-	customerParams := &customer.Params{
+	customerParams := &stripe.CustomerParams{
 		Email: stripe.String(email),
 		Metadata: map[string]string{
 			"user_id": userID,
