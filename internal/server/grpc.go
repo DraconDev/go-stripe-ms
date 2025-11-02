@@ -32,7 +32,7 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	log.Printf("CreateSubscriptionCheckout called for user: %s, product: %s", req.UserId, req.ProductId)
 
 	// Get user details from metadata (assuming Cerberus service provides this)
-	userDetails, err := s.getUserDetails(ctx, req.UserId)
+	_, err := s.getUserDetails(ctx, req.UserId)
 	if err != nil {
 		log.Printf("Failed to get user details: %v", err)
 		return nil, status.Error(codes.FailedPrecondition, "failed to get user details")
