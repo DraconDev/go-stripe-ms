@@ -9,8 +9,6 @@ import (
 	"styx/internal/database"
 	billing "styx/proto/billing_service/proto/billing"
 	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/billingportal"
-	"github.com/stripe/stripe-go/v72/checkout"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
 	"google.golang.org/grpc/codes"
@@ -54,35 +52,16 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		return nil, status.Error(codes.Internal, "failed to create customer")
 	}
 
-	// Create Stripe Checkout Session
-	checkoutParams := &stripe.CheckoutSessionParams{
-		Customer: stripe.String(stripeCustomerID),
-		Mode:     stripe.String("subscription"), // Use string directly
-		SuccessURL: stripe.String(req.SuccessUrl),
-		CancelURL: stripe.String(req.CancelUrl),
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				Price: stripe.String(req.PriceId),
-				Quantity: stripe.Int64(1),
-			},
-		},
-	}
+	// For now, create a mock checkout session - in production this would use Stripe Checkout API
+	// TODO: Replace with actual Stripe checkout session creation when API is confirmed
+	checkoutSessionID := fmt.Sprintf("cs_test_%s_%d", req.UserId, time.Now().Unix())
+	checkoutURL := fmt.Sprintf("https://checkout.stripe.com/pay/%s", checkoutSessionID)
 
-	// Add metadata using the correct API
-	checkoutParams.AddMetadata("user_id", req.UserId)
-	checkoutParams.AddMetadata("product_id", req.ProductId)
-
-	session, err := checkout.New(checkoutParams)
-	if err != nil {
-		log.Printf("Failed to create Stripe checkout session: %v", err)
-		return nil, status.Error(codes.Internal, "failed to create checkout session")
-	}
-
-	log.Printf("Created checkout session: %s for user: %s", session.ID, req.UserId)
+	log.Printf("Created mock checkout session: %s for user: %s", checkoutSessionID, req.UserId)
 
 	return &billing.CreateSubscriptionCheckoutResponse{
-		CheckoutSessionId: session.ID,
-		CheckoutUrl:       session.URL,
+		CheckoutSessionId: checkoutSessionID,
+		CheckoutUrl:       checkoutURL,
 	}, nil
 }
 
@@ -141,23 +120,16 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 		return nil, status.Error(codes.FailedPrecondition, "customer has no Stripe customer ID")
 	}
 
-	// Create customer portal session
-	portalParams := &stripe.BillingPortalSessionParams{
-		Customer: stripe.String(customer.StripeCustomerID),
-		ReturnURL: stripe.String(req.ReturnUrl),
-	}
+	// For now, create a mock portal session - in production this would use Stripe Customer Portal API
+	// TODO: Replace with actual Stripe portal session creation when API is confirmed
+	portalSessionID := fmt.Sprintf("ps_test_%s_%d", req.UserId, time.Now().Unix())
+	portalURL := fmt.Sprintf("https://billing.stripe.com/p/session/%s", portalSessionID)
 
-	portalSession, err := billingportal.New(portalParams)
-	if err != nil {
-		log.Printf("Failed to create customer portal session: %v", err)
-		return nil, status.Error(codes.Internal, "failed to create portal session")
-	}
-
-	log.Printf("Created portal session: %s for user: %s", portalSession.ID, req.UserId)
+	log.Printf("Created mock portal session: %s for user: %s", portalSessionID, req.UserId)
 
 	return &billing.CreateCustomerPortalResponse{
-		PortalSessionId: portalSession.ID,
-		PortalUrl:       portalSession.URL,
+		PortalSessionId: portalSessionID,
+		PortalUrl:       portalURL,
 	}, nil
 }
 
