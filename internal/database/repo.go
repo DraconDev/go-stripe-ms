@@ -19,11 +19,6 @@ func NewRepository(db *pgx.Conn) *Repository {
 	return &Repository{db: db}
 }
 
-// isMock returns true if this is a mock repository (no database connection)
-func (r *Repository) isMock() bool {
-	return r.db == nil
-}
-
 // FindOrCreateStripeCustomer finds an existing customer or creates a new one
 func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error) {
 	// First, try to find existing customer
@@ -33,7 +28,7 @@ func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, ema
 		FROM customers 
 		WHERE user_id = $1
 	`, userID).Scan(&existingCustomerID)
-
+	
 	if err == nil && existingCustomerID != "" {
 		log.Printf("Found existing customer for user %s: %s", userID, existingCustomerID)
 		return existingCustomerID, nil
@@ -86,7 +81,7 @@ func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productI
 // CreateSubscription creates a new subscription record
 func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error {
 	ID := uuid.New()
-
+	
 	// Get customer database ID
 	var customerDBID uuid.UUID
 	err := r.db.QueryRow(ctx, `
@@ -94,7 +89,7 @@ func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeS
 		FROM customers 
 		WHERE stripe_customer_id = $1
 	`, customerID).Scan(&customerDBID)
-
+	
 	if err != nil {
 		return err
 	}
@@ -158,7 +153,7 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
-
+		
 		`CREATE TABLE IF NOT EXISTS subscriptions (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
@@ -173,7 +168,7 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			UNIQUE(user_id, product_id)
 		)`,
-
+		
 		`CREATE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_id ON customers(stripe_customer_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`,
