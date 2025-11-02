@@ -38,13 +38,6 @@ func NewBillingService(db *database.Repository, stripeSecret string) *BillingSer
 func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *billing.CreateSubscriptionCheckoutRequest) (*billing.CreateSubscriptionCheckoutResponse, error) {
 	log.Printf("CreateSubscriptionCheckout called for user: %s, product: %s", req.UserId, req.ProductId)
 
-	// Get user details from metadata (assuming Cerberus service provides this)
-	userDetails, err := s.getUserDetails(ctx, req.UserId)
-	if err != nil {
-		log.Printf("Failed to get user details: %v", err)
-		return nil, status.Error(codes.FailedPrecondition, "failed to get user details")
-	}
-
 	// For now, create a mock checkout session - in production this would use Stripe Checkout API
 	// TODO: Replace with actual Stripe checkout session creation when API is confirmed
 	checkoutSessionID := fmt.Sprintf("cs_test_%s_%d", req.UserId, time.Now().Unix())
