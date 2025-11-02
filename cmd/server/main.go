@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"billing_service/internal/config"
-	"billing_service/internal/database"
-	"billing_service/internal/server"
-	"billing_service/internal/webhooks"
-	billing "billing_service/proto/billing_service/proto/billing"
+	"styx/internal/config"
+	"styx/internal/database"
+	"styx/internal/server"
+	"styx/internal/webhooks"
+	billing "styx/proto/billing_service/proto/billing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
