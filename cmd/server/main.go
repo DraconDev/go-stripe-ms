@@ -18,6 +18,7 @@ import (
 	"styx/internal/webhooks"
 	billing "styx/proto/billing_service/proto/billing"
 
+	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -58,23 +59,21 @@ func NewServer(cfg *config.Config) (*Server, error) {
 func initDatabase(cfg *config.Config) (*database.Repository, error) {
 	log.Printf("Using database URL: %s", cfg.DatabaseURL)
 	
-	// In a real implementation, you would use pgx.Connect here
-	// For now, we'll create a mock connection
-	// conn, err := pgx.Connect(context.Background(), cfg.DatabaseURL)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// Connect to the actual database
+	conn, err := pgx.Connect(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
 
 	// Initialize database tables
-	// repo := database.NewRepository(conn)
-	// if err := repo.InitializeTables(context.Background()); err != nil {
-	// 	return nil, fmt.Errorf("failed to initialize database tables: %w", err)
-	// }
+	repo := database.NewRepository(conn)
+	if err := repo.InitializeTables(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to initialize database tables: %w", err)
+	}
 
 	log.Println("Database connection initialized successfully")
 	
-	// Return a mock repository for now
-	return &database.Repository{}, nil
+	return repo, nil
 }
 
 // StartGRPCServer starts the gRPC server
@@ -162,13 +161,6 @@ func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	
-	// Check database health
-	if err := s.db.InitializeTables(nil); err != nil {
-		log.Printf("Health check failed: database error: %v", err)
-		http.Error(w, `{"status": "unhealthy", "error": "database connection failed"}`, http.StatusServiceUnavailable)
-		return
-	}
-
 	// Check webhook handler health
 	if err := s.webhookHandler.HealthCheck(); err != nil {
 		log.Printf("Health check failed: webhook handler error: %v", err)
@@ -185,11 +177,6 @@ func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Start() error {
 	log.Printf("Starting billing service")
 	
-	// Initialize database
-	if err := s.db.InitializeTables(nil); err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
-	}
-
 	// Start servers
 	if err := s.StartGRPCServer(); err != nil {
 		return fmt.Errorf("failed to start gRPC server: %w", err)
@@ -258,7 +245,7 @@ func main() {
 	// Print configuration (remove sensitive data)
 	log.Printf("Configuration loaded:")
 	log.Printf("  HTTP Port: %d", cfg.HTTPPort)
-	log.Printf("  gRPC Port: %d", cfg.GRPCPort)
+	log.Printf("  gRPC Port: %d", s.config.GRPCPort)
 	log.Printf("  Log Level: %s", cfg.LogLevel)
 
 	// Create and run server
