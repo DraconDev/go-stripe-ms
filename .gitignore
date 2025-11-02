@@ -1,4 +1,5 @@
 # Environment files with sensitive data
+.env
 .env.local
 .env.production
 .env.staging
