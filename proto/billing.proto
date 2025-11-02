@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package billing;
 
-option go_package = "billing_service/proto/billing";
+option go_package = "styx/proto/billing";
 
 import "google/protobuf/timestamp.proto";
 
