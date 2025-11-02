@@ -56,21 +56,21 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 
 	// Create Stripe Checkout Session
 	checkoutParams := &stripe.CheckoutSessionParams{
-		Customer:        stripe.String(stripeCustomerID),
-		Mode:            stripe.ModeSubscription,
-		SuccessURL:      stripe.String(req.SuccessUrl),
-		CancelURL:       stripe.String(req.CancelUrl),
+		Customer: stripe.String(stripeCustomerID),
+		Mode:     stripe.CheckoutModeSubscription,
+		SuccessURL: stripe.String(req.SuccessUrl),
+		CancelURL: stripe.String(req.CancelUrl),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				Price:    stripe.String(req.PriceId),
+				Price: stripe.String(req.PriceId),
 				Quantity: stripe.Int64(1),
 			},
 		},
-		Metadata: map[string]string{
-			"user_id":    req.UserId,
-			"product_id": req.ProductId,
-		},
 	}
+
+	// Add metadata using the correct API
+	checkoutParams.AddMetadata("user_id", req.UserId)
+	checkoutParams.AddMetadata("product_id", req.ProductId)
 
 	session, err := checkout.NewSession(checkoutParams)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 
 	// Create customer portal session
 	portalParams := &stripe.BillingPortalSessionParams{
-		Customer:  stripe.String(customer.StripeCustomerID),
+		Customer: stripe.String(customer.StripeCustomerID),
 		ReturnURL: stripe.String(req.ReturnUrl),
 	}
 
@@ -173,10 +173,10 @@ func (s *BillingService) findOrCreateStripeCustomer(ctx context.Context, userID,
 	// Create new Stripe customer
 	customerParams := &stripe.CustomerParams{
 		Email: stripe.String(email),
-		Metadata: map[string]string{
-			"user_id": userID,
-		},
 	}
+	
+	// Add metadata using the correct API
+	customerParams.AddMetadata("user_id", userID)
 
 	stripeCustomer, err := customer.New(customerParams)
 	if err != nil {
