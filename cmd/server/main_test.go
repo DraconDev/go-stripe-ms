@@ -9,6 +9,7 @@ import (
 	"styx/internal/server"
 	"styx/internal/webhooks"
 	proto_billing "styx/proto/billing_service/proto/billing"
+	"github.com/jackc/pgx/v5"
 )
 
 // TestBillingService tests the core functionality of the BillingService
@@ -103,6 +104,65 @@ func TestBillingService(t *testing.T) {
 			// Expected to fail with mock repository
 			t.Logf("CreateCustomerPortal failed as expected with mock repository: %v", err)
 		}
+	})
+}
+
+// TestBillingServiceWithRealDB tests the billing service with a real database connection
+func TestBillingServiceWithRealDB(t *testing.T) {
+	// Load configuration from environment
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Connect to the real database
+	conn, err := pgx.Connect(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		t.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer conn.Close(context.Background())
+	
+	// Create real database repository
+	db := database.NewRepository(conn)
+	
+	// Initialize the billing service with real Stripe secret from environment
+	billingService := server.NewBillingService(db, cfg.StripeSecretKey)
+	
+	if billingService == nil {
+		t.Fatal("Failed to create BillingService")
+	}
+	
+	t.Run("InitializeRealDatabase", func(t *testing.T) {
+		ctx := context.Background()
+		err := db.InitializeTables(ctx)
+		
+		// With real database, this should succeed
+		if err != nil {
+			t.Fatalf("InitializeTables failed with real database: %v", err)
+		} else {
+			t.Logf("Database tables initialized successfully with real database")
+		}
+	})
+	
+	t.Run("GetSubscriptionStatusWithRealDB", func(t *testing.T) {
+		req := &proto_billing.GetSubscriptionStatusRequest{
+			UserId:    "test-user-real-db",
+			ProductId: "test-product-real-db",
+		}
+		
+		ctx := context.Background()
+		resp, err := billingService.GetSubscriptionStatus(ctx, req)
+		
+		if err != nil {
+			t.Fatalf("GetSubscriptionStatus failed with real database: %v", err)
+		}
+		
+		// For non-existent subscription in real database, we expect Exists to be false
+		if resp.Exists {
+			t.Error("Expected subscription not to exist for test user")
+		}
+		
+		t.Logf("Real database subscription status check completed")
 	})
 }
 
