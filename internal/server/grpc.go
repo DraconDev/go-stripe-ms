@@ -57,7 +57,7 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	// Create Stripe Checkout Session
 	checkoutParams := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(stripeCustomerID),
-		Mode:     stripe.CheckoutModeSubscription,
+		Mode:     stripe.String("subscription"), // Use string directly
 		SuccessURL: stripe.String(req.SuccessUrl),
 		CancelURL: stripe.String(req.CancelUrl),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
