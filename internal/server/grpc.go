@@ -45,13 +45,6 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		return nil, status.Error(codes.FailedPrecondition, "failed to get user details")
 	}
 
-	// Find or create Stripe customer
-	stripeCustomerID, err := s.findOrCreateStripeCustomer(ctx, req.UserId, userDetails.Email)
-	if err != nil {
-		log.Printf("Failed to find or create Stripe customer: %v", err)
-		return nil, status.Error(codes.Internal, "failed to create customer")
-	}
-
 	// For now, create a mock checkout session - in production this would use Stripe Checkout API
 	// TODO: Replace with actual Stripe checkout session creation when API is confirmed
 	checkoutSessionID := fmt.Sprintf("cs_test_%s_%d", req.UserId, time.Now().Unix())
