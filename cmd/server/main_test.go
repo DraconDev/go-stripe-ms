@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"billing_service/internal/database"
-	"billing_service/internal/server"
-	"billing_service/internal/webhooks"
-	proto_billing "billing_service/proto/billing_service/proto/billing"
+	"styx/internal/database"
+	"styx/internal/server"
+	"styx/internal/webhooks"
+	proto_billing "styx/proto/billing_service/proto/billing"
 )
 
 // TestBillingService tests the core functionality of the BillingService
