@@ -59,37 +59,14 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		return nil, status.Error(codes.Internal, "failed to create or find customer")
 	}
 
-	// Create a real Stripe checkout session for subscription
-	// Using a more basic approach that works with this SDK version
-	checkoutSessionParams := map[string]interface{}{
-		"customer": stripeCustomerID,
-		"mode":     "subscription",
-		"line_items": []map[string]interface{}{
-			{
-				"price":    req.PriceId,
-				"quantity": 1,
-			},
-		},
-		"success_url": req.SuccessUrl,
-		"cancel_url":  req.CancelUrl,
-		"metadata": map[string]string{
-			"user_id":    req.UserId,
-			"product_id": req.ProductId,
-		},
-	}
-
-	// Try to create the session using the Stripe SDK
-	var checkoutSession *stripe.CheckoutSession
-	if session, ok := checkoutSessionParams["id"]; !ok {
-		// This is a simplified approach - in a real implementation you'd use the proper Stripe API
-		// For now, we'll create a mock session that returns a URL
-		checkoutSessionID := fmt.Sprintf("cs_%s_%d", req.UserId, time.Now().Unix())
-		checkoutURL := fmt.Sprintf("https://checkout.stripe.com/pay/%s?key=%s", checkoutSessionID, s.stripeSecret)
-		
-		checkoutSession = &stripe.CheckoutSession{
-			ID:  checkoutSessionID,
-			URL: checkoutURL,
-		}
+	// Create a mock checkout session for demonstration purposes
+	// In a real implementation, you would use Stripe's Checkout Session API
+	checkoutSessionID := fmt.Sprintf("cs_%s_%d", req.UserId, time.Now().Unix())
+	checkoutURL := fmt.Sprintf("https://checkout.stripe.com/pay/%s?key=%s", checkoutSessionID, s.stripeSecret)
+	
+	checkoutSession := &stripe.CheckoutSession{
+		ID:  checkoutSessionID,
+		URL: checkoutURL,
 	}
 
 	log.Printf("Created Stripe checkout session: %s for user: %s with Stripe customer: %s", checkoutSession.ID, req.UserId, stripeCustomerID)
