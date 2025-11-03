@@ -8,7 +8,7 @@ import (
 	"styx/internal/database"
 	"styx/internal/server"
 	"styx/internal/webhooks"
-	proto_billing "styx/proto/billing_service/proto/billing"
+	proto_billing "styx/proto/billing"
 	"github.com/jackc/pgx/v5"
 )
 
