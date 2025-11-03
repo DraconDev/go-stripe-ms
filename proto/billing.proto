@@ -20,7 +20,7 @@ service BillingService {
 
 // Request to create a subscription checkout session
 message CreateSubscriptionCheckoutRequest {
-  string user_id = 1;      // Your internal User ID from Cerberus.
+  string user_id = 1;      // Your internal User ID.
   string email = 2;        // ***** THE CRITICAL ADDITION ***** The user's email, provided by the calling service.
   string product_id = 3;   // The internal product ID, e.g., "logalyzer".
   string price_id = 4;     // The specific Stripe Price ID, e.g., "price_123abc...".

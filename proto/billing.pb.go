@@ -27,7 +27,7 @@ type CreateSubscriptionCheckoutRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	UserId     string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`             // Your internal User ID from Cerberus.
+	UserId     string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`             // Your internal User ID.
 	Email      string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`                             // ***** THE CRITICAL ADDITION ***** The user's email, provided by the calling service.
 	ProductId  string `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`    // The internal product ID, e.g., "logalyzer".
 	PriceId    string `protobuf:"bytes,4,opt,name=price_id,json=priceId,proto3" json:"price_id,omitempty"`          // The specific Stripe Price ID, e.g., "price_123abc...".
