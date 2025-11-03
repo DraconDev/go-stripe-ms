@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"styx/internal/database"
-	billing "styx/proto/billing"
+	billing "styx/proto/billing_service/proto/billing"
+
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -27,7 +28,7 @@ type BillingService struct {
 // NewBillingService creates a new billing service instance
 func NewBillingService(db *database.Repository, stripeSecret string) *BillingService {
 	stripe.Key = stripeSecret
-	
+
 	return &BillingService{
 		db:           db,
 		stripeSecret: stripeSecret,
@@ -74,20 +75,20 @@ func (s *BillingService) GetSubscriptionStatus(ctx context.Context, req *billing
 		log.Printf("Failed to get Stripe subscription %s: %v", stripeSubID, err)
 		// Return database status if Stripe call fails
 		return &billing.GetSubscriptionStatusResponse{
-			SubscriptionId:    stripeSubID,
-			Status:            "unknown",
-			CustomerId:        customerID,
-			CurrentPeriodEnd:  timestamppb.New(currentPeriodEnd),
-			Exists:            true,
+			SubscriptionId:   stripeSubID,
+			Status:           "unknown",
+			CustomerId:       customerID,
+			CurrentPeriodEnd: timestamppb.New(currentPeriodEnd),
+			Exists:           true,
 		}, nil
 	}
 
 	return &billing.GetSubscriptionStatusResponse{
-		SubscriptionId:    stripeSubID,
-		Status:            string(stripeSubscription.Status),
-		CustomerId:        stripeSubscription.Customer.ID,
-		CurrentPeriodEnd:  timestamppb.New(time.Unix(stripeSubscription.CurrentPeriodEnd, 0)),
-		Exists:            true,
+		SubscriptionId:   stripeSubID,
+		Status:           string(stripeSubscription.Status),
+		CustomerId:       stripeSubscription.Customer.ID,
+		CurrentPeriodEnd: timestamppb.New(time.Unix(stripeSubscription.CurrentPeriodEnd, 0)),
+		Exists:           true,
 	}, nil
 }
 
@@ -132,7 +133,7 @@ func (s *BillingService) findOrCreateStripeCustomer(ctx context.Context, userID,
 	customerParams := &stripe.CustomerParams{
 		Email: stripe.String(email),
 	}
-	
+
 	// Add metadata using the correct API
 	customerParams.AddMetadata("user_id", userID)
 
@@ -151,4 +152,33 @@ func (s *BillingService) findOrCreateStripeCustomer(ctx context.Context, userID,
 
 	log.Printf("Created new Stripe customer: %s for user: %s", stripeCustomer.ID, userID)
 	return stripeCustomer.ID, nil
+}
+
+// getUserDetails retrieves user details from metadata (proxy for Cerberus service integration)
+func (s *BillingService) getUserDetails(ctx context.Context, userID string) (*UserDetails, error) {
+	// For now, extract from metadata (assuming Cerberus service provides this via metadata)
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("no metadata in context")
+	}
+
+	userEmails := md["user-email"]
+	if len(userEmails) == 0 {
+		// Fallback for development
+		return &UserDetails{
+			ID:    userID,
+			Email: fmt.Sprintf("user+%s@example.com", userID),
+		}, nil
+	}
+
+	return &UserDetails{
+		ID:    userID,
+		Email: userEmails[0],
+	}, nil
+}
+
+// UserDetails represents user information
+type UserDetails struct {
+	ID    string
+	Email string
 }
