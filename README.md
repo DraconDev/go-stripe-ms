@@ -26,7 +26,7 @@ A comprehensive Go microservice for handling Stripe subscription billing with **
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   gRPC Clients  │────│   gRPC Server   │────│  PostgreSQL DB  │
+│   gRPC Clients  │────│   gRPC Server   │────│   Neon DB       │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │
                               ▼
@@ -38,8 +38,8 @@ A comprehensive Go microservice for handling Stripe subscription billing with **
 
 ## 📋 Prerequisites
 
-- **Go 1.23+**
-- **PostgreSQL 14+** (or cloud database)
+- **Go 1.22+**
+- **Neon DB** (PostgreSQL) - Cloud-based PostgreSQL database
 - **Stripe Account** with API keys
 - **Docker & Docker Compose** (optional)
 
@@ -57,20 +57,32 @@ nano .env
 
 Required environment variables:
 ```bash
-DATABASE_URL=postgresql://username:password@host:port/database
+# Neon DB Configuration
+DATABASE_URL=postgresql://neondb_owner:your_password@ep-your-db.neon.tech/neondb?sslmode=require
+
+# Stripe Configuration
 STRIPE_SECRET_KEY=sk_test_your_real_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_real_webhook_secret
+
+# Server Configuration
 GRPC_PORT=9090
 HTTP_PORT=8080
 LOG_LEVEL=info
+
+# Optional: Cerberus Integration
 CERBERUS_GRPC_DIAL_ADDRESS=cerberus-service:50051
 ```
 
 ### 2. Database Setup
 
+**Neon DB (Recommended):**
+The database tables are automatically created when the service starts. For manual setup, run:
 ```bash
-# Initialize database schema
-psql $DATABASE_URL -f init.sql
+# Using the seed tool
+cd cmd/seed && go run main.go
+
+# Or manually via psql
+psql "$DATABASE_URL" -f scripts/create_tables.sql
 ```
 
 ### 3. Run the Service
@@ -168,27 +180,21 @@ GET /health
 
 ### Test Structure
 
-The project includes a comprehensive test suite with two testing approaches:
+The project includes a comprehensive test suite:
 
 #### Mock Repository Tests (Fast)
 Tests that use mock repositories and don't require database connection:
 ```bash
 # Run only mock tests (no environment variables needed)
-go test ./cmd/server/ -run "TestBillingService/CreateSubscriptionCheckout" -v
-go test ./cmd/server/ -run "TestDatabaseIntegration" -v
-go test ./cmd/server/ -run "TestWebhookHandler" -v
+go test ./cmd/server/ -run "TestBillingService" -v
 ```
 
-#### Real Database Tests (Integration)
-Tests that use actual PostgreSQL database:
+#### Database Integration Tests
+Tests that use actual Neon DB database:
 ```bash
 # Run tests with real database (requires environment variables)
 DATABASE_URL="postgresql://..." STRIPE_SECRET_KEY="..." \
   go test ./cmd/server/ -run "TestBillingServiceWithRealDB" -v
-
-# Run configuration tests
-DATABASE_URL="..." STRIPE_SECRET_KEY="..." \
-  go test ./cmd/server/ -run "TestConfiguration" -v
 ```
 
 ### Running All Tests
@@ -201,16 +207,12 @@ go test ./cmd/server/ -v
 source .env && go test ./cmd/server/ -v
 ```
 
-### Test Categories
+### Adding Test Data
 
-1. **TestBillingService** - Core billing functionality with mock repo
-2. **TestBillingServiceWithRealDB** - Real database integration testing
-3. **TestConfiguration** - Environment configuration validation
-4. **TestDatabaseIntegration** - Database operations with mock repo
-5. **TestWebhookHandler** - Webhook processing functionality
-6. **TestServerOrchestration** - Server component integration
-7. **TestErrorHandling** - Error scenario testing
-8. **BenchmarkCreateSubscriptionCheckout** - Performance testing
+Use the seed tool to add test users and subscriptions:
+```bash
+cd cmd/seed && go run main.go
+```
 
 ## 🔧 Configuration
 
@@ -218,13 +220,13 @@ source .env && go test ./cmd/server/ -v
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_URL` | ✅ | - | PostgreSQL connection string |
+| `DATABASE_URL` | ✅ | - | Neon DB PostgreSQL connection string |
 | `STRIPE_SECRET_KEY` | ✅ | - | Stripe secret API key |
 | `STRIPE_WEBHOOK_SECRET` | ✅ | - | Stripe webhook signing secret |
-| `GRPC_PORT` | ❌ | `50051` | gRPC server port |
+| `GRPC_PORT` | ❌ | `9090` | gRPC server port |
 | `HTTP_PORT` | ❌ | `8080` | HTTP server port |
 | `LOG_LEVEL` | ❌ | `info` | Logging level (debug, info, warn, error) |
-| `CERBERUS_GRPC_DIAL_ADDRESS` | ✅ | - | External service address |
+| `CERBERUS_GRPC_DIAL_ADDRESS` | ❌ | - | External service address (optional) |
 
 ### Database Configuration
 
@@ -240,7 +242,7 @@ The service automatically configures connection pooling:
 ### Using Docker Compose
 
 ```bash
-# Build and start all services
+# Build and start service
 docker-compose up --build
 
 # Run in background
@@ -348,15 +350,17 @@ Log levels:
 
 ```
 styx/
-├── cmd/server/           # Main server application
+├── cmd/
+│   ├── server/          # Main server application
+│   └── seed/           # Database seeding tool
 ├── internal/
-│   ├── config/           # Configuration management
-│   ├── database/         # Database models and repository
-│   ├── server/           # gRPC service implementation
-│   └── webhooks/         # Stripe webhook handling
-├── proto/                # Protocol buffer definitions
-├── docker-compose.yml    # Docker orchestration
-└── init.sql             # Database schema
+│   ├── config/         # Configuration management
+│   ├── database/       # Database models and repository
+│   ├── server/         # gRPC service implementation
+│   └── webhooks/       # Stripe webhook handling
+├── proto/              # Protocol buffer definitions
+├── docker-compose.yml  # Docker orchestration
+└── .env.example        # Environment template
 ```
 
 ### Adding New Features
@@ -401,8 +405,8 @@ go vet ./...
 # Check DATABASE_URL format
 echo $DATABASE_URL
 
-# Test connection
-psql $DATABASE_URL -c "SELECT 1;"
+# Test connection with Neon DB
+psql "$DATABASE_URL" -c "SELECT 1;"
 ```
 
 #### Environment Variables Not Loaded
@@ -450,4 +454,4 @@ For issues and questions:
 
 ---
 
-**Production Ready:** This microservice has been tested with both mock and real database scenarios, includes comprehensive error handling, and follows Go best practices for production deployment.
+**Production Ready:** This microservice has been tested with both mock and real database scenarios, includes comprehensive error handling, and follows Go best practices for production deployment with Neon DB.
