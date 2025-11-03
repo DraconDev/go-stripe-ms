@@ -20,8 +20,6 @@ type Config struct {
 	GRPCPort int
 	HTTPPort int
 
-	// Service Integration
-	CerberusGRPCDialAddress string
 
 	// Logging
 	LogLevel string
