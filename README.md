@@ -224,7 +224,6 @@ cd cmd/seed && go run main.go
 | `GRPC_PORT` | ❌ | `9090` | gRPC server port |
 | `HTTP_PORT` | ❌ | `8080` | HTTP server port |
 | `LOG_LEVEL` | ❌ | `info` | Logging level (debug, info, warn, error) |
-| `CERBERUS_GRPC_DIAL_ADDRESS` | ❌ | - | External service address (optional) |
 
 ### Database Configuration
 
