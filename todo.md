@@ -1,6 +1,4 @@
-- [ ] Explore codebase to find Cerberus address implementation
-- [ ] Analyze the existing code structure and test patterns
-- [ ] Identify appropriate location for the test
-- [ ] Write comprehensive test for Cerberus address functionality
-- [ ] Verify test runs successfully
-- [ ] Document the test coverage
+- [ ] Add Stripe API integration to CreateSubscriptionCheckout
+- [ ] Add real Stripe customer portal functionality
+- [ ] Enhance webhook event processing
+- [ ] Add subscription cancellation functionality
