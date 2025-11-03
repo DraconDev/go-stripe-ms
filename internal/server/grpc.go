@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"styx/internal/database"
-	billing "styx/proto/billing_service/proto/billing"
+	billing "styx/proto/billing"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
@@ -151,33 +151,4 @@ func (s *BillingService) findOrCreateStripeCustomer(ctx context.Context, userID,
 
 	log.Printf("Created new Stripe customer: %s for user: %s", stripeCustomer.ID, userID)
 	return stripeCustomer.ID, nil
-}
-
-// getUserDetails retrieves user details from metadata (proxy for Cerberus service integration)
-func (s *BillingService) getUserDetails(ctx context.Context, userID string) (*UserDetails, error) {
-	// For now, extract from metadata (assuming Cerberus service provides this via metadata)
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("no metadata in context")
-	}
-
-	userEmails := md["user-email"]
-	if len(userEmails) == 0 {
-		// Fallback for development
-		return &UserDetails{
-			ID:    userID,
-			Email: fmt.Sprintf("user+%s@example.com", userID),
-		}, nil
-	}
-
-	return &UserDetails{
-		ID:    userID,
-		Email: userEmails[0],
-	}, nil
-}
-
-// UserDetails represents user information
-type UserDetails struct {
-	ID    string
-	Email string
 }
