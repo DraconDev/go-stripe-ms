@@ -29,7 +29,8 @@ func TestBillingService(t *testing.T) {
 	t.Run("CreateSubscriptionCheckout", func(t *testing.T) {
 		req := &proto_billing.CreateSubscriptionCheckoutRequest{
 			UserId:     "test-user-123",
-			ProductId:  "test-product-456",
+			Email:      "test@example.com",
+			ProductId:  "test-product-456", 
 			PriceId:    "test-price-789",
 			SuccessUrl: "https://example.com/success",
 			CancelUrl:  "https://example.com/cancel",
