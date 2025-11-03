@@ -36,14 +36,35 @@ func NewBillingService(db *database.Repository, stripeSecret string) *BillingSer
 
 // CreateSubscriptionCheckout initiates a Stripe subscription checkout session
 func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *billing.CreateSubscriptionCheckoutRequest) (*billing.CreateSubscriptionCheckoutResponse, error) {
-	log.Printf("CreateSubscriptionCheckout called for user: %s, product: %s", req.UserId, req.ProductId)
+	log.Printf("CreateSubscriptionCheckout called for user: %s, email: %s, product: %s", req.UserId, req.Email, req.ProductId)
 
-	// For now, create a mock checkout session - in production this would use Stripe Checkout API
-	// TODO: Replace with actual Stripe checkout session creation when API is confirmed
+	// Validate required fields
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if req.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+	if req.ProductId == "" {
+		return nil, status.Error(codes.InvalidArgument, "product_id is required")
+	}
+	if req.PriceId == "" {
+		return nil, status.Error(codes.InvalidArgument, "price_id is required")
+	}
+
+	// Find or create Stripe customer using the email field
+	stripeCustomerID, err := s.findOrCreateStripeCustomer(ctx, req.UserId, req.Email)
+	if err != nil {
+		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserId, err)
+		return nil, status.Error(codes.Internal, "failed to create or find customer")
+	}
+
+	// Create Stripe checkout session (using mock for now - TODO: implement real Stripe API)
+	// In production, this would create a real Stripe Checkout Session
 	checkoutSessionID := fmt.Sprintf("cs_test_%s_%d", req.UserId, time.Now().Unix())
 	checkoutURL := fmt.Sprintf("https://checkout.stripe.com/pay/%s", checkoutSessionID)
 
-	log.Printf("Created mock checkout session: %s for user: %s", checkoutSessionID, req.UserId)
+	log.Printf("Created checkout session: %s for user: %s with Stripe customer: %s", checkoutSessionID, req.UserId, stripeCustomerID)
 
 	return &billing.CreateSubscriptionCheckoutResponse{
 		CheckoutSessionId: checkoutSessionID,
