@@ -69,8 +69,6 @@ GRPC_PORT=9090
 HTTP_PORT=8080
 LOG_LEVEL=info
 
-# Optional: Cerberus Integration
-CERBERUS_GRPC_DIAL_ADDRESS=cerberus-service:50051
 ```
 
 ### 2. Database Setup
