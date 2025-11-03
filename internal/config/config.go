@@ -38,17 +38,22 @@ func LoadConfig() (*Config, error) {
 		StripeWebhookSecret: getEnvOrError("STRIPE_WEBHOOK_SECRET"),
 		
 		// Ports
-		GRPCPort: getEnvAsInt("GRPC_PORT", 50051),
+		GRPCPort: getEnvAsInt("GRPC_PORT", 9090),
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
 		
-		// Service Integration
-		CerberusGRPCDialAddress: getEnvOrError("CERBERUS_GRPC_DIAL_ADDRESS"),
+		// Service Integration (optional)
+		CerberusGRPCDialAddress: getEnv("CERBERUS_GRPC_DIAL_ADDRESS"),
 		
 		// Logging
 		LogLevel: getEnvOrError("LOG_LEVEL"),
 	}
 
 	return cfg, nil
+}
+
+// getEnv retrieves an environment variable, returns empty string if not set
+func getEnv(key string) string {
+	return os.Getenv(key)
 }
 
 // getEnvOrError retrieves an environment variable and logs an error if missing
@@ -79,11 +84,11 @@ func getEnvAsInt(key string, defaultValue int) int {
 // GetDatabasePoolConfig returns pgx pool configuration
 func (c *Config) GetDatabasePoolConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"connString": c.DatabaseURL,
-		"minConns":   5,
-		"maxConns":   25,
-		"maxConnLifetime": time.Hour,
-		"maxConnIdleTime": time.Minute * 30,
-		"healthCheckPeriod": time.Minute * 5,
+		"connString":          c.DatabaseURL,
+		"minConns":            5,
+		"maxConns":            25,
+		"maxConnLifetime":     time.Hour,
+		"maxConnIdleTime":     time.Minute * 30,
+		"healthCheckPeriod":   time.Minute * 5,
 	}
 }
