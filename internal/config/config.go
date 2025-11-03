@@ -39,8 +39,6 @@ func LoadConfig() (*Config, error) {
 		GRPCPort: getEnvAsInt("GRPC_PORT", 9090),
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
 		
-		// Service Integration (optional)
-		CerberusGRPCDialAddress: getEnv("CERBERUS_GRPC_DIAL_ADDRESS"),
 		
 		// Logging
 		LogLevel: getEnvOrError("LOG_LEVEL"),
