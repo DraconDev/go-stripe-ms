@@ -1,27 +1,8 @@
-version: "3.8"
-
 services:
-  # PostgreSQL Database
-  database:
-    image: postgres:15-alpine
-    container_name: billing_database
-    environment:
-      POSTGRES_DB: billing_service
-      POSTGRES_USER: billing_user
-      POSTGRES_PASSWORD: billing_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
-    networks:
-      - billing_network
-
-  # Billing Service
+  # Billing Service - Stripe Payment Microservice
   billing-service:
     build: .
-    container_name: billing_service
+    container_name: billing-service
     ports:
       - "8080:8080"    # HTTP port for webhooks and health checks
       - "9090:9090"    # gRPC port
@@ -30,13 +11,13 @@ services:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       
-      # Database Configuration
-      - DATABASE_URL=postgresql://billing_user:billing_password@database:5432/billing_service
-      - DB_HOST=database
-      - DB_PORT=5432
-      - DB_NAME=billing_service
-      - DB_USER=billing_user
-      - DB_PASSWORD=billing_password
+      # Database Configuration (Neon DB)
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
       
       # Server Configuration
       - HTTP_PORT=8080
@@ -45,28 +26,14 @@ services:
       
       # Service Configuration
       - SERVICE_NAME=billing-service
-      - ENVIRONMENT=development
-    depends_on:
-      - database
+      - ENVIRONMENT=production
+      
+      # Optional: Cerberus Integration
+      - CERBERUS_GRPC_DIAL_ADDRESS=${CERBERUS_GRPC_DIAL_ADDRESS:-}
     restart: unless-stopped
-    networks:
-      - billing_network
-
-  # Database migration service (optional, for production)
-  migrate:
-    image: migrate/migrate:latest
-    container_name: billing_migrate
-    volumes:
-      - ./migrations:/migrations
-    command: ["-path", "/migrations", "-database", "postgresql://billing_user:billing_password@database:5432/billing_service", "up"]
-    depends_on:
-      - database
-    networks:
-      - billing_network
-
-volumes:
-  postgres_data:
-
-networks:
-  billing_network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      timeout: 3s
+      interval: 30s
+      retries: 3
+      start_period: 40s
