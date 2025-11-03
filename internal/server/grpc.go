@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"styx/internal/database"
-	billing "styx/billing"
+	billing "styx/proto"
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/customer"
