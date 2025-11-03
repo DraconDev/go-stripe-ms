@@ -1,8 +1,8 @@
 # Styx Billing Microservice
 
-A comprehensive Go microservice for handling Stripe subscription billing with PostgreSQL database integration, gRPC API, and webhook event processing.
+A comprehensive Go microservice for handling Stripe subscription billing with **Neon DB**, gRPC API, and webhook event processing.
 
-![Go](https://img.shields.io/badge/Go-1.23-blue)
+![Go](https://img.shields.io/badge/Go-1.22-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 
@@ -13,7 +13,7 @@ A comprehensive Go microservice for handling Stripe subscription billing with Po
 - **💳 Subscription Management** - Create checkout sessions, manage subscriptions, customer portals
 - **📡 gRPC API** - High-performance gRPC service for billing operations
 - **🔄 Webhook Processing** - Handle Stripe webhook events with context-aware processing
-- **🗄️ Database Integration** - PostgreSQL with pgx for subscription and customer data persistence
+- **🗄️ Neon DB Integration** - PostgreSQL with pgx for subscription and customer data persistence
 - **⚙️ Environment Configuration** - Full environment variable-based configuration
 
 ### Infrastructure
