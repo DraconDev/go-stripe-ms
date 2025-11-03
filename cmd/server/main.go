@@ -16,7 +16,7 @@ import (
 	"styx/internal/database"
 	"styx/internal/server"
 	"styx/internal/webhooks"
-	billing "styx/proto/billing_service/proto/billing"
+	billing "styx/proto"
 
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
