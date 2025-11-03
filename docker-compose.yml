@@ -4,13 +4,13 @@ services:
     build: .
     container_name: billing-service
     ports:
-      - "8081:8081"    # HTTP port for webhooks and health checks (avoiding Cerberus 8080)
-      - "9090:9090"    # gRPC port
+      - "8080:8080" # HTTP port for webhooks and health checks
+      - "9090:9090" # gRPC port
     environment:
       # Stripe Configuration
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      
+
       # Database Configuration (Neon DB)
       - DATABASE_URL=${DATABASE_URL}
       - DB_HOST=${DB_HOST}
@@ -18,21 +18,29 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      
-      # Server Configuration (avoid Cerberus conflict)
-      - HTTP_PORT=8081
+
+      # Server Configuration
+      - HTTP_PORT=8080
       - GRPC_PORT=9090
       - LOG_LEVEL=info
-      
+
       # Service Configuration
       - SERVICE_NAME=billing-service
       - ENVIRONMENT=production
-      
-      # Optional: Cerberus Integration (assuming Cerberus runs on 8080)
+
+      # Optional: Cerberus Integration
       - CERBERUS_GRPC_DIAL_ADDRESS=${CERBERUS_GRPC_DIAL_ADDRESS:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
       timeout: 3s
       interval: 30s
       retries: 3
