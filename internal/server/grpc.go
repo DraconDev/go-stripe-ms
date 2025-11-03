@@ -10,6 +10,7 @@ import (
 	billing "styx/proto"
 
 	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/checkout"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
 	"google.golang.org/grpc/codes"
@@ -59,38 +60,36 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		return nil, status.Error(codes.Internal, "failed to create or find customer")
 	}
 
-	// Create real Stripe checkout session for subscription using the correct API
-	checkoutParams := map[string]interface{}{
-		"customer":    stripeCustomerID,
-		"payment_method_types": []string{"card"},
-		"line_items": []map[string]interface{}{
+	// Create real Stripe checkout session for subscription
+	params := &stripe.CheckoutSessionParams{
+		Customer: stripe.String(stripeCustomerID),
+		Mode:     stripe.CheckoutSessionModeSubscription,
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				"price":    req.PriceId,
-				"quantity": 1,
+				Price:    stripe.String(req.PriceId),
+				Quantity: stripe.Int64(1),
 			},
 		},
-		"mode":             "subscription",
-		"success_url":      req.SuccessUrl,
-		"cancel_url":       req.CancelUrl,
-		"subscription_data": map[string]interface{}{
-			"metadata": map[string]string{
-				"user_id":    req.UserId,
-				"product_id": req.ProductId,
-			},
-		},
+		SuccessURL: stripe.String(req.SuccessUrl),
+		CancelURL:  stripe.String(req.CancelUrl),
 	}
 
-	params := &stripe.CheckoutSessionParams{}
-	if session, err := params.NewSession(checkoutParams); err != nil {
+	// Add metadata using subscription data
+	params.AddMetadata("user_id", req.UserId)
+	params.AddMetadata("product_id", req.ProductId)
+
+	checkoutSession, err := checkout.New(params)
+	if err != nil {
 		log.Printf("Failed to create Stripe checkout session: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create checkout session")
-	} else {
-		log.Printf("Created Stripe checkout session: %s for user: %s with Stripe customer: %s", session.ID, req.UserId, stripeCustomerID)
-		return &billing.CreateSubscriptionCheckoutResponse{
-			CheckoutSessionId: session.ID,
-			CheckoutUrl:       session.URL,
-		}, nil
 	}
+
+	log.Printf("Created Stripe checkout session: %s for user: %s with Stripe customer: %s", checkoutSession.ID, req.UserId, stripeCustomerID)
+
+	return &billing.CreateSubscriptionCheckoutResponse{
+		CheckoutSessionId: checkoutSession.ID,
+		CheckoutUrl:       checkoutSession.URL,
+	}, nil
 }
 
 // GetSubscriptionStatus retrieves the current status of a user's subscription
