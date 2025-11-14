@@ -192,7 +192,7 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 	tests := []struct {
 		name               string
 		requestBody        map[string]interface{}
-		setupMockDatabase  func(*MockDatabase)
+		setupMockDatabase  func(database.RepositoryInterface)
 		expectedStatusCode int
 		expectedResponse   map[string]interface{}
 		expectedError      string
@@ -207,14 +207,16 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				"success_url": "https://example.com/success",
 				"cancel_url":  "https://example.com/cancel",
 			},
-			setupMockDatabase: func(m *MockDatabase) {
-				m.AddTestCustomer(&database.Customer{
-					UserID:           "user123",
-					Email:            "test@example.com",
-					StripeCustomerID: "cus_test123",
-					CreatedAt:        time.Now(),
-					UpdatedAt:        time.Now(),
-				})
+			setupMockDatabase: func(db database.RepositoryInterface) {
+				if mockDB, ok := db.(*MockDatabase); ok {
+					mockDB.AddTestCustomer(&database.Customer{
+						UserID:           "user123",
+						Email:            "test@example.com",
+						StripeCustomerID: "cus_test123",
+						CreatedAt:        time.Now(),
+						UpdatedAt:        time.Now(),
+					})
+				}
 			},
 			expectedStatusCode: http.StatusOK,
 		},
@@ -227,7 +229,7 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				"success_url": "https://example.com/success",
 				"cancel_url":  "https://example.com/cancel",
 			},
-			setupMockDatabase:  func(m *MockDatabase) {},
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedError:      "Missing required fields",
 		},
@@ -237,7 +239,7 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				"user_id": "user123",
 				"invalid": make(chan int), // Unmarshallable type
 			},
-			setupMockDatabase:  func(m *MockDatabase) {},
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedError:      "Invalid request body",
 		},
@@ -251,14 +253,14 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				"success_url": "",
 				"cancel_url":  "",
 			},
-			setupMockDatabase:  func(m *MockDatabase) {},
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedError:      "Missing required fields",
 		},
 		{
 			name:               "Method not allowed",
 			requestBody:        nil,
-			setupMockDatabase:  func(m *MockDatabase) {},
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
 			expectedStatusCode: http.StatusMethodNotAllowed,
 			expectedError:      "Method not allowed",
 		},
@@ -267,7 +269,7 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
-			mockDB := NewMockDatabase().(*MockDatabase) // Type assert to MockDatabase
+			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
 
 			server := NewHTTPServer(mockDB, "sk_test_123")
@@ -275,16 +277,15 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 			// Create request
 			var req *http.Request
 			if tt.requestBody != nil {
-				if tt.name == "Method not allowed" {
-					// For method not allowed test, use nil body to trigger different path
-					req = httptest.NewRequest(http.MethodGet, "/api/v1/checkout", nil)
-				} else {
-					bodyBytes, _ := json.Marshal(tt.requestBody)
-					req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", bytes.NewReader(bodyBytes))
-					req.Header.Set("Content-Type", "application/json")
-				}
+				bodyBytes, _ := json.Marshal(tt.requestBody)
+				req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", bytes.NewReader(bodyBytes))
+				req.Header.Set("Content-Type", "application/json")
 			} else {
-				req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", nil)
+				if method, ok := tt.requestBody["method"].(string); ok {
+					req = httptest.NewRequest(method, "/api/v1/checkout", nil)
+				} else {
+					req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", nil)
+				}
 			}
 
 			// Execute
@@ -387,7 +388,7 @@ func TestGetSubscriptionStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
-			mockDB := NewMockDatabase().(*MockDatabase) // Type assert to MockDatabase
+			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
 
 			server := NewHTTPServer(mockDB, "sk_test_123")
@@ -503,7 +504,7 @@ func TestCreateCustomerPortal(t *testing.T) {
 				m.AddTestCustomer(&database.Customer{
 					UserID:           "user123",
 					Email:            "test@example.com",
-					StripeCustomerID: "", // No Stripe customer ID
+					StripeCustomerID: "",
 					CreatedAt:        time.Now(),
 					UpdatedAt:        time.Now(),
 				})
@@ -512,11 +513,18 @@ func TestCreateCustomerPortal(t *testing.T) {
 			expectedError:      "Customer has no Stripe customer ID",
 		},
 		{
-			name:               "Method not allowed",
+			name: "Invalid JSON body",
 			requestBody: map[string]interface{}{
-				"user_id":    "user123",
-				"return_url": "https://example.com/account",
+				"user_id": "user123",
+				"invalid": make(chan int),
 			},
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Invalid request body",
+		},
+		{
+			name:               "Method not allowed",
+			requestBody:        nil,
 			setupMockDatabase:  func(m *MockDatabase) {},
 			expectedStatusCode: http.StatusMethodNotAllowed,
 			expectedError:      "Method not allowed",
@@ -526,19 +534,19 @@ func TestCreateCustomerPortal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
-			mockDB := NewMockDatabase().(*MockDatabase) // Type assert to MockDatabase
+			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
 
 			server := NewHTTPServer(mockDB, "sk_test_123")
 
 			// Create request
 			var req *http.Request
-			if strings.Contains(tt.name, "Method not allowed") {
-				req = httptest.NewRequest(http.MethodGet, "/api/v1/portal", nil)
-			} else {
+			if tt.requestBody != nil {
 				bodyBytes, _ := json.Marshal(tt.requestBody)
 				req = httptest.NewRequest(http.MethodPost, "/api/v1/portal", bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
+			} else {
+				req = httptest.NewRequest(tt.requestBody["method"].(string), "/api/v1/portal", nil)
 			}
 
 			// Execute
@@ -559,6 +567,64 @@ func TestCreateCustomerPortal(t *testing.T) {
 				}
 			}
 
+			if tt.expectedResponse != nil && w.Code == http.StatusOK {
+				var response map[string]interface{}
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Errorf("Failed to unmarshal response: %v", err)
+				}
+				// Add more specific assertions if needed
+			}
+
+			// Check Content-Type header
+			if w.Header().Get("Content-Type") != "application/json" {
+				t.Errorf("Expected Content-Type 'application/json', got '%s'", w.Header().Get("Content-Type"))
+			}
+		})
+	}
+}
+
+// Test Suite for HealthCheck
+func TestHealthCheck(t *testing.T) {
+	tests := []struct {
+		name               string
+		method             string
+		expectedStatusCode int
+		expectedResponse   map[string]interface{}
+	}{
+		{
+			name:               "Valid health check",
+			method:             http.MethodGet,
+			expectedStatusCode: http.StatusOK,
+			expectedResponse: map[string]interface{}{
+				"status":  "healthy",
+				"service": "billing-service",
+			},
+		},
+		{
+			name:               "Method not allowed",
+			method:             http.MethodPost,
+			expectedStatusCode: http.StatusMethodNotAllowed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			mockDB := NewMockDatabase()
+			server := NewHTTPServer(mockDB, "sk_test_123")
+
+			// Create request
+			req := httptest.NewRequest(tt.method, "/health", nil)
+
+			// Execute
+			w := httptest.NewRecorder()
+			server.HealthCheck(w, req)
+
+			// Assert
+			if w.Code != tt.expectedStatusCode {
+				t.Errorf("Expected status code %d, got %d", tt.expectedStatusCode, w.Code)
+			}
+
 			if tt.expectedResponse != nil {
 				var response map[string]interface{}
 				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
@@ -570,6 +636,13 @@ func TestCreateCustomerPortal(t *testing.T) {
 						}
 					}
 				}
+
+				// Check that timestamp exists and is valid
+				if timestamp, exists := response["timestamp"]; exists {
+					if _, ok := timestamp.(string); !ok {
+						t.Errorf("Expected timestamp to be a string, got %T", timestamp)
+					}
+				}
 			}
 
 			// Check Content-Type header
@@ -577,5 +650,58 @@ func TestCreateCustomerPortal(t *testing.T) {
 				t.Errorf("Expected Content-Type 'application/json', got '%s'", w.Header().Get("Content-Type"))
 			}
 		})
+	}
+}
+
+// Benchmark tests for performance testing
+func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
+	mockDB := NewMockDatabase()
+	mockDB.AddTestCustomer(&database.Customer{
+		UserID:           "benchmark-user",
+		Email:            "benchmark@example.com",
+		StripeCustomerID: "cus_benchmark",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	})
+
+	server := NewHTTPServer(mockDB, "sk_test_123")
+
+	requestBody := map[string]interface{}{
+		"user_id":     "benchmark-user",
+		"email":       "benchmark@example.com",
+		"product_id":  "premium_plan",
+		"price_id":    "price_benchmark",
+		"success_url": "https://example.com/success",
+		"cancel_url":  "https://example.com/cancel",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bodyBytes, _ := json.Marshal(requestBody)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		server.CreateSubscriptionCheckout(w, req)
+	}
+}
+
+func BenchmarkGetSubscriptionStatus(b *testing.B) {
+	mockDB := NewMockDatabase()
+	mockDB.AddTestSubscription(&database.Subscription{
+		UserID:               "benchmark-user",
+		ProductID:            "premium_plan",
+		StripeSubscriptionID: "sub_benchmark",
+		Status:               "active",
+		CurrentPeriodEnd:     time.Now().AddDate(0, 0, 30),
+	})
+
+	server := NewHTTPServer(mockDB, "sk_test_123")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/subscriptions/benchmark-user/premium_plan", nil)
+		w := httptest.NewRecorder()
+		server.GetSubscriptionStatus(w, req)
 	}
 }
