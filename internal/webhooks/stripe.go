@@ -16,12 +16,12 @@ import (
 
 // StripeWebhookHandler handles incoming Stripe webhook events
 type StripeWebhookHandler struct {
-	db     *database.Repository
+	db     database.RepositoryInterface
 	secret string
 }
 
 // NewStripeWebhookHandler creates a new Stripe webhook handler
-func NewStripeWebhookHandler(db *database.Repository, stripeSecret, webhookSecret string) *StripeWebhookHandler {
+func NewStripeWebhookHandler(db database.RepositoryInterface, stripeSecret, webhookSecret string) *StripeWebhookHandler {
 	stripe.Key = stripeSecret
 	
 	return &StripeWebhookHandler{
