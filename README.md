@@ -1,10 +1,15 @@
 # Styx Billing Microservice (HTTP-Only)
 
-A comprehensive HTTP-only Go microservice for handling Stripe subscription billing with **Neon DB**, REST API, and webhook event processing.
+A comprehensive **HTTP-only** Go microservice for handling Stripe subscription billing with **Neon DB**, REST API, and webhook event processing. Successfully migrated from gRPC to HTTP for universal compatibility.
 
 ![Go](https://img.shields.io/badge/Go-1.22-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
+![Architecture](https://img.shields.io/badge/Architecture-HTTP--Only-blue)
+
+## ✅ Migration Complete: gRPC → HTTP
+
+This service has been successfully converted from a gRPC-based architecture to a pure HTTP REST API, providing universal compatibility with any application while maintaining all functionality.
 
 ## 🚀 Features
 
@@ -12,7 +17,7 @@ A comprehensive HTTP-only Go microservice for handling Stripe subscription billi
 
 - **🔒 Secure Stripe Integration** - Real Stripe API integration with environment-based configuration
 - **💳 Subscription Management** - Create checkout sessions, manage subscriptions, customer portals
-- **🌐 HTTP REST API** - Universal compatibility with any application via HTTP
+- **🌐 HTTP REST API** - Universal compatibility with any application via HTTP (previously gRPC)
 - **🔄 Webhook Processing** - Handle Stripe webhook events with context-aware processing
 - **🗄️ Neon DB Integration** - PostgreSQL with pgx for subscription and customer data persistence
 - **⚙️ Environment Configuration** - Full environment variable-based configuration
@@ -22,22 +27,33 @@ A comprehensive HTTP-only Go microservice for handling Stripe subscription billi
 - **🐳 Docker Support** - Complete containerization with docker-compose
 - **🏥 Health Monitoring** - Health check endpoints and graceful shutdown
 - **📝 Comprehensive Logging** - Structured logging with configurable levels
-- **🧪 Test Suite** - Both mock and real database integration tests
-- **📚 API Documentation** - OpenAPI/Swagger specification included
+- **📚 API Documentation** - OpenAPI/Swagger specification (OpenAPI 3.1.0)
+- **🔧 Easy Integration** - Simple HTTP endpoints work with any technology stack
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   HTTP Clients  │────│   HTTP Server   │────│   Neon DB       │
+│  (Any Language) │    │   (Go/Gin)      │    │   PostgreSQL    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                               │
-                               ▼
-                        ┌─────────────────┐
-                        │ Stripe Webhooks │
-                        │    HTTP API     │
-                        └─────────────────┘
+                                │
+                                ▼
+                         ┌─────────────────┐
+                         │ Stripe Webhooks │
+                         │    HTTP API     │
+                         └─────────────────┘
 ```
+
+### Before (gRPC) → After (HTTP)
+
+| Aspect | gRPC (Previous) | HTTP (Current) |
+|--------|----------------|----------------|
+| **Protocol** | HTTP/2 + Protobuf | HTTP/1.1 + JSON |
+| **Compatibility** | Limited language support | Universal support |
+| **Debugging** | Complex tools required | Simple cURL/browser |
+| **Documentation** | Generated proto docs | OpenAPI/Swagger |
+| **Integration** | gRPC clients needed | Any HTTP client |
 
 ## 📋 Prerequisites
 
@@ -213,19 +229,22 @@ Stripe-Signature: <webhook-signature>
 
 The project includes comprehensive testing:
 
-#### Mock Repository Tests (Fast)
+#### HTTP Endpoint Tests
 
 ```bash
-# Run tests without database
+# Test all HTTP endpoints
+go test ./...
+
+# Run specific tests
 go test ./cmd/server/ -v
 ```
 
-#### Database Integration Tests
+#### Integration Testing
 
 ```bash
 # Run tests with real database (requires environment variables)
 DATABASE_URL="postgresql://..." STRIPE_SECRET_KEY="..." \
-  go test ./cmd/server/ -run "TestWithDB" -v
+  go test ./cmd/server/ -v
 ```
 
 ### Adding Test Data
@@ -366,20 +385,45 @@ else:
     print("No active subscription")
 ```
 
-### cURL Examples
+### PHP
 
-#### Health Check
+```php
+<?php
+// Create customer portal
+$response = http_post_data("http://localhost:8080/api/v1/portal", json_encode([
+    "user_id" => "user_123",
+    "return_url" => "https://yourapp.com/account"
+]), [
+    "Content-Type: application/json"
+]);
 
-```bash
-curl http://localhost:8080/health
+$data = json_decode($response, true);
+header("Location: " . $data["portal_url"]);
+?>
 ```
 
-#### Create Portal Session
+### Ruby
 
-```bash
-curl -X POST http://localhost:8080/api/v1/portal \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user_123", "return_url": "https://yourapp.com/account"}'
+```ruby
+require 'net/http'
+require 'json'
+
+# Create checkout session
+uri = URI('http://localhost:8080/api/v1/checkout')
+http = Net::HTTP.new(uri.host, uri.port)
+request = Net::HTTP::Post.new(uri.path, {'Content-Type' => 'application/json'})
+request.body = {
+  user_id: "user_123",
+  email: "user@example.com",
+  product_id: "premium_plan",
+  price_id: "price_1234567890",
+  success_url: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}",
+  cancel_url: "https://yourapp.com/cancel"
+}.to_json
+
+response = http.request(request)
+data = JSON.parse(response.body)
+puts "Checkout URL: #{data['checkout_url']}"
 ```
 
 ## 📊 Monitoring
@@ -416,6 +460,7 @@ Log levels:
 - **Database connection security** - SSL/TLS connection support
 - **Graceful shutdown** - Proper connection cleanup
 - **Input validation** - Request parameter validation
+- **CORS support** - Cross-origin resource sharing for web clients
 
 ## 🤝 Development
 
@@ -441,7 +486,7 @@ styx/
 1. **HTTP Endpoints:** Add to `internal/server/http.go`
 2. **Database Operations:** Extend `internal/database/repo.go`
 3. **Configuration:** Update `internal/config/config.go`
-4. **Tests:** Add to `cmd/server/main_test.go`
+4. **Tests:** Add to appropriate test files
 
 ### Code Quality
 
@@ -460,6 +505,9 @@ go fmt ./...
 
 # Run linter
 go vet ./...
+
+# Build service
+go build -o server cmd/server/main.go
 ```
 
 ## 📈 Performance
@@ -468,6 +516,18 @@ go vet ./...
 - **Database Connection Pooling:** Efficient connection management
 - **Concurrent Request Handling:** Goroutine-based processing
 - **Graceful Shutdown:** Proper resource cleanup
+- **Low Memory Footprint:** Optimized for containerized deployments
+
+## 🔍 Migration Benefits
+
+### Why HTTP Instead of gRPC?
+
+- **🌍 Universal Compatibility** - Works with any programming language
+- **🔧 Simple Debugging** - Use familiar tools like cURL, Postman, browser
+- **📚 Better Documentation** - OpenAPI/Swagger integration
+- **🚀 Easier Deployment** - Standard HTTP load balancers and proxies
+- **🔍 Better Observability** - Standard HTTP monitoring tools
+- **⚡ Reduced Complexity** - No code generation or protobuf compilation
 
 ## 🔍 Troubleshooting
 
@@ -499,39 +559,68 @@ source .env && echo $DATABASE_URL
 - Check network connectivity to Stripe API
 - Review application logs for specific error messages
 
-### Debug Mode
+## 🎯 Production Deployment
 
-```bash
-# Enable debug logging
-LOG_LEVEL=debug go run cmd/server/main.go
+### Kubernetes
 
-# Run tests with verbose output
-go test ./cmd/server/ -v -count=1
-
-# Use debug endpoint (development only)
-curl http://localhost:8080/debug
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: styx-billing
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: styx-billing
+  template:
+    metadata:
+      labels:
+        app: styx-billing
+    spec:
+      containers:
+      - name: styx-billing
+        image: styx-billing:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: styx-secrets
+              key: database-url
 ```
 
-## 📝 License
+### Cloud Deployment
 
-MIT License - see [LICENSE](LICENSE) file for details.
+The service is ready for deployment on:
+- **AWS ECS/Fargate**
+- **Google Cloud Run**
+- **Azure Container Instances**
+- **DigitalOcean App Platform**
+- **Heroku**
+- **Railway**
+- **Render**
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Run the test suite
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📞 Support
 
-For issues and questions:
-
+For support and questions:
 - Create an issue on GitHub
-- Check existing documentation
-- Review test examples for usage patterns
+- Check the API documentation at `/docs` (when served)
+- Review the OpenAPI specification in `api/openapi.yaml`
 
 ---
 
-**Production Ready:** This HTTP-only microservice has been designed for universal compatibility and tested with both mock and real database scenarios, includes comprehensive error handling, and follows Go best practices for production deployment with Neon DB.
+**Status:** ✅ Production Ready | **Architecture:** HTTP-Only | **Language:** Go | **Database:** PostgreSQL
