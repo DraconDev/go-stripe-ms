@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -26,22 +26,13 @@ func NewTestDatabase(t *testing.T) *TestDatabase {
 	
 	ctx := context.Background()
 	
+	// Automatically load environment variables
+	autoLoadEnv()
+	
 	// Get database connection string
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		// Try to construct from individual env vars
-		dbHost := os.Getenv("DB_HOST")
-		dbPort := os.Getenv("DB_PORT")
-		dbName := os.Getenv("DB_NAME")
-		dbUser := os.Getenv("DB_USER")
-		dbPassword := os.Getenv("DB_PASSWORD")
-		
-		if dbHost == "" {
-			t.Fatal("No DATABASE_URL found and DB_HOST not set")
-		}
-		
-		connStr = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=require",
-			dbUser, dbPassword, dbHost, dbPort, dbName)
+		t.Fatal("DATABASE_URL environment variable is required for integration tests")
 	}
 
 	// Connect to test database
@@ -145,9 +136,6 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 func WithTestDatabase(t *testing.T, testFunc func(*testing.T, *TestDatabase)) {
 	t.Helper()
 	
-	// Load environment
-	loadEnvIfExists()
-	
 	// Check if database is configured
 	if os.Getenv("DATABASE_URL") == "" {
 		t.Skip("DATABASE_URL not set, skipping database tests")
@@ -163,31 +151,11 @@ func WithTestDatabase(t *testing.T, testFunc func(*testing.T, *TestDatabase)) {
 	testFunc(t, testDB)
 }
 
-// LoadRealEnv loads the real .env file for database testing
-func LoadRealEnv() {
-	envFiles := []string{
-		".env",
-		".env.local",
-	}
-	
-	for _, envFile := range envFiles {
-		if _, err := os.Stat(envFile); err == nil {
-			if err := loadEnvFile(envFile); err == nil {
-				log.Printf("Loaded environment from: %s", envFile)
-				break
-			}
-		}
-	}
-}
-
 // WithRealDatabase runs a test with the real production database
 func WithRealDatabase(t *testing.T, testFunc func(*testing.T, *Repository)) {
 	t.Helper()
 	
-	// Load real environment
-	loadEnvIfExists()
-	
-	// Get database URL from environment
+	// Check if database is configured
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		t.Skip("DATABASE_URL not set, skipping real database tests")
@@ -209,9 +177,23 @@ func WithRealDatabase(t *testing.T, testFunc func(*testing.T, *Repository)) {
 	testFunc(t, repo)
 }
 
-// loadEnvIfExists loads environment variables from .env file if it exists
-func loadEnvIfExists() {
-	envFiles := []string{".env", ".env.local"}
+// autoLoadEnv automatically loads environment variables from .env files
+func autoLoadEnv() {
+	// Try multiple locations for .env file
+	envFiles := []string{
+		".env",
+		".env.local",
+	}
+	
+	// Also check if we're running from a subdirectory
+	if cwd, err := os.Getwd(); err == nil {
+		// Try relative paths from current working directory
+		relativePaths := []string{
+			filepath.Join(cwd, ".env"),
+			filepath.Join(cwd, ".env.local"),
+		}
+		envFiles = append(envFiles, relativePaths...)
+	}
 	
 	for _, envFile := range envFiles {
 		if err := loadEnvFile(envFile); err == nil {
@@ -241,6 +223,14 @@ func loadEnvFile(envFilePath string) error {
 		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
+		
+		// Remove quotes if present
+		if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
+		   (strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+			value = value[1 : len(value)-1]
+		}
+		
+		// Only set if not already set (preserve existing environment)
 		if _, exists := os.LookupEnv(key); !exists {
 			os.Setenv(key, value)
 		}
