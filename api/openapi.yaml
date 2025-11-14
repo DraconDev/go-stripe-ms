@@ -1,0 +1,327 @@
+openapi: 3.0.3
+info:
+  title: Styx Billing Service API
+  description: |
+    HTTP-only payment microservice for handling Stripe subscription billing.
+    
+    ## Features
+    - Create Stripe Checkout Sessions for subscription purchases
+    - Retrieve subscription status from database and Stripe
+    - Generate Stripe Customer Portal sessions for account management
+    - Process Stripe webhooks for subscription lifecycle events
+    
+    ## Architecture
+    - **HTTP-only**: Universal compatibility with any application
+    - **Webhook-driven**: Subscription state managed through Stripe webhooks
+    - **Database persistence**: PostgreSQL with Neon DB
+  version: 1.0.0
+  contact:
+    name: API Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.yourdomain.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the billing service
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  service:
+                    type: string
+                    example: billing-service
+
+  /api/v1/checkout:
+    post:
+      summary: Create subscription checkout session
+      description: |
+        Creates a Stripe Checkout Session for subscription purchases.
+        This endpoint handles customer creation/retrieval and session generation.
+      tags:
+        - Billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - email
+                - product_id
+                - price_id
+                - success_url
+                - cancel_url
+              properties:
+                user_id:
+                  type: string
+                  description: Your internal user identifier
+                  example: "user_123"
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                product_id:
+                  type: string
+                  description: Internal product identifier
+                  example: "premium_plan"
+                price_id:
+                  type: string
+                  description: Stripe Price ID (e.g., price_123abc...)
+                  example: "price_1234567890"
+                success_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on successful checkout
+                  example: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}"
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on cancelled checkout
+                  example: "https://yourapp.com/cancel"
+      responses:
+        '200':
+          description: Checkout session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_session_id:
+                    type: string
+                    description: Stripe checkout session ID
+                    example: "cs_test_1234567890"
+                  checkout_url:
+                    type: string
+                    format: uri
+                    description: URL to complete the checkout
+                    example: "https://checkout.stripe.com/pay/cs_test_1234567890"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/subscriptions/{user_id}/{product_id}:
+    get:
+      summary: Get subscription status
+      description: |
+        Retrieves the current subscription status for a user/product combination.
+        Checks both local database and Stripe for the most current status.
+      tags:
+        - Billing
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+            example: "user_123"
+        - name: product_id
+          in: path
+          required: true
+          description: Product identifier
+          schema:
+            type: string
+            example: "premium_plan"
+      responses:
+        '200':
+          description: Subscription status retrieved successfully
+          content:
+            application/json:
+              oneOf:
+                - $ref: '#/components/schemas/SubscriptionExists'
+                - $ref: '#/components/schemas/SubscriptionNotExists'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/portal:
+    post:
+      summary: Create customer portal session
+      description: |
+        Creates a Stripe Customer Portal session for account management.
+        Users can manage their subscriptions, update payment methods, etc.
+      tags:
+        - Billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - return_url
+              properties:
+                user_id:
+                  type: string
+                  description: User identifier
+                  example: "user_123"
+                return_url:
+                  type: string
+                  format: uri
+                  description: URL to return to after portal session
+                  example: "https://yourapp.com/account"
+      responses:
+        '200':
+          description: Portal session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portal_session_id:
+                    type: string
+                    description: Stripe portal session ID
+                    example: "ps_test_1234567890"
+                  portal_url:
+                    type: string
+                    format: uri
+                    description: URL to access the customer portal
+                    example: "https://billing.stripe.com/p/session/ps_test_1234567890"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook endpoint
+      description: |
+        Processes Stripe webhook events for subscription lifecycle management.
+        
+        ## Supported Events
+        - `customer.subscription.created` - New subscription created
+        - `customer.subscription.updated` - Subscription status changed
+        - `customer.subscription.deleted` - Subscription cancelled
+        - `invoice.payment_succeeded` - Payment successful
+        - `invoice.payment_failed` - Payment failed
+        - `payment_method.attached` - Payment method added
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Event ID
+                type:
+                  type: string
+                  description: Event type
+                data:
+                  type: object
+                  description: Event data payload
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "processed"
+
+components:
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid request"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Resource not found"
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Internal server error"
+
+  schemas:
+    SubscriptionExists:
+      type: object
+      properties:
+        subscription_id:
+          type: string
+          description: Stripe subscription ID
+          example: "sub_1234567890"
+        status:
+          type: string
+          description: Subscription status
+          enum: [active, canceled, past_due, incomplete, incomplete_expired, trialing, unpaid]
+          example: "active"
+        customer_id:
+          type: string
+          description: Stripe customer ID
+          example: "cus_1234567890"
+        current_period_end:
+          type: string
+          format: date-time
+          description: Current billing period end
+          example: "2024-12-31T23:59:59Z"
+        exists:
+          type: boolean
+          example: true
+    SubscriptionNotExists:
+      type: object
+      properties:
+        exists:
+          type: boolean
+          example: false
+
+tags:
+  - name: Health
+    description: Service health and monitoring endpoints
+  - name: Billing
+    description: Subscription and payment management endpoints
+  - name: Webhooks
+    description: Stripe webhook processing endpoints
