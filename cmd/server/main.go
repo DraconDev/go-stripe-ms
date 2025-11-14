@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -109,7 +110,11 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	s.webhookHandler.SetupRoutes(mux)
 	
 	// Debug endpoint (development only)
-	if os.Getenv("ENVIRONMENT") != "production" {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = "development"
+	}
+	if env != "production" {
 		mux.HandleFunc("/debug", s.debugHandler)
 	}
 }
@@ -120,7 +125,7 @@ func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
 		"service":         "billing-service",
 		"status":          "running",
 		"time":           time.Now().UTC().Format(time.RFC3339),
-		"environment":    os.Getenv("ENVIRONMENT", "development"),
+		"environment":    getEnvironment(),
 		"database_url":   "configured",
 		"stripe_key":     "configured",
 	}
@@ -130,6 +135,15 @@ func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
 	
 	jsonData, _ := json.Marshal(info)
 	w.Write(jsonData)
+}
+
+// getEnvironment returns the current environment with default
+func getEnvironment() string {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		return "development"
+	}
+	return env
 }
 
 // Start starts the HTTP server
@@ -194,7 +208,7 @@ func main() {
 	// Print configuration (remove sensitive data)
 	log.Printf("Configuration loaded:")
 	log.Printf("  HTTP Port: %d", cfg.HTTPPort)
-	log.Printf("  Environment: %s", os.Getenv("ENVIRONMENT", "development"))
+	log.Printf("  Environment: %s", getEnvironment())
 	log.Printf("  Log Level: %s", cfg.LogLevel)
 
 	// Create and run server
