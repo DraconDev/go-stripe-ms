@@ -1,6 +1,6 @@
-# Styx Billing Microservice
+# Styx Billing Microservice (HTTP-Only)
 
-A comprehensive Go microservice for handling Stripe subscription billing with **Neon DB**, gRPC API, and webhook event processing.
+A comprehensive HTTP-only Go microservice for handling Stripe subscription billing with **Neon DB**, REST API, and webhook event processing.
 
 ![Go](https://img.shields.io/badge/Go-1.22-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -9,31 +9,34 @@ A comprehensive Go microservice for handling Stripe subscription billing with **
 ## 🚀 Features
 
 ### Core Functionality
+
 - **🔒 Secure Stripe Integration** - Real Stripe API integration with environment-based configuration
 - **💳 Subscription Management** - Create checkout sessions, manage subscriptions, customer portals
-- **📡 gRPC API** - High-performance gRPC service for billing operations
+- **🌐 HTTP REST API** - Universal compatibility with any application via HTTP
 - **🔄 Webhook Processing** - Handle Stripe webhook events with context-aware processing
 - **🗄️ Neon DB Integration** - PostgreSQL with pgx for subscription and customer data persistence
 - **⚙️ Environment Configuration** - Full environment variable-based configuration
 
 ### Infrastructure
+
 - **🐳 Docker Support** - Complete containerization with docker-compose
 - **🏥 Health Monitoring** - Health check endpoints and graceful shutdown
 - **📝 Comprehensive Logging** - Structured logging with configurable levels
 - **🧪 Test Suite** - Both mock and real database integration tests
+- **📚 API Documentation** - OpenAPI/Swagger specification included
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   gRPC Clients  │────│   gRPC Server   │────│   Neon DB       │
+│   HTTP Clients  │────│   HTTP Server   │────│   Neon DB       │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │ Stripe Webhooks │
-                       │    HTTP API     │
-                       └─────────────────┘
+                               │
+                               ▼
+                        ┌─────────────────┐
+                        │ Stripe Webhooks │
+                        │    HTTP API     │
+                        └─────────────────┘
 ```
 
 ## 📋 Prerequisites
@@ -56,6 +59,7 @@ nano .env
 ```
 
 Required environment variables:
+
 ```bash
 # Neon DB Configuration
 DATABASE_URL=postgresql://neondb_owner:your_password@ep-your-db.neon.tech/neondb?sslmode=require
@@ -65,7 +69,6 @@ STRIPE_SECRET_KEY=sk_test_your_real_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_real_webhook_secret
 
 # Server Configuration
-GRPC_PORT=9090
 HTTP_PORT=8080
 LOG_LEVEL=info
 
@@ -75,6 +78,7 @@ LOG_LEVEL=info
 
 **Neon DB (Recommended):**
 The database tables are automatically created when the service starts. For manual setup, run:
+
 ```bash
 # Using the seed tool
 cd cmd/seed && go run main.go
@@ -95,139 +99,197 @@ docker-compose up --build
 
 ## 📚 API Documentation
 
-### gRPC Service
+### HTTP REST API
 
-The service implements the `BillingService` with the following methods:
+The service provides the following HTTP endpoints:
 
-#### CreateSubscriptionCheckout
-Creates a Stripe Checkout Session for subscription purchases.
+#### Health Check
 
-**Request:**
-```proto
-message CreateSubscriptionCheckoutRequest {
-  string user_id = 1;
-  string product_id = 2;
-  string price_id = 3;
-  string success_url = 4;
-  string cancel_url = 5;
+```http
+GET /health
+```
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-11-14T04:00:00Z",
+  "service": "billing-service"
+}
+```
+
+#### Create Subscription Checkout
+
+```http
+POST /api/v1/checkout
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user_123",
+  "email": "user@example.com",
+  "product_id": "premium_plan",
+  "price_id": "price_1234567890",
+  "success_url": "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}",
+  "cancel_url": "https://yourapp.com/cancel"
 }
 ```
 
 **Response:**
-```proto
-message CreateSubscriptionCheckoutResponse {
-  string checkout_session_id = 1;
-  string checkout_url = 2;
+
+```json
+{
+  "checkout_session_id": "cs_test_1234567890",
+  "checkout_url": "https://checkout.stripe.com/pay/cs_test_1234567890"
 }
 ```
 
-#### GetSubscriptionStatus
-Retrieves the subscription status for a user/product combination.
+#### Get Subscription Status
 
-**Request:**
-```proto
-message GetSubscriptionStatusRequest {
-  string user_id = 1;
-  string product_id = 2;
+```http
+GET /api/v1/subscriptions/{user_id}/{product_id}
+```
+
+**Response (Subscription Exists):**
+
+```json
+{
+  "subscription_id": "sub_1234567890",
+  "status": "active",
+  "customer_id": "cus_1234567890",
+  "current_period_end": "2024-12-31T23:59:59Z",
+  "exists": true
+}
+```
+
+**Response (No Subscription):**
+
+```json
+{
+  "exists": false
+}
+```
+
+#### Create Customer Portal
+
+```http
+POST /api/v1/portal
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user_123",
+  "return_url": "https://yourapp.com/account"
 }
 ```
 
 **Response:**
-```proto
-message GetSubscriptionStatusResponse {
-  bool exists = 1;
-  string status = 2;
-  int64 current_period_end = 3;
+
+```json
+{
+  "portal_session_id": "ps_test_1234567890",
+  "portal_url": "https://billing.stripe.com/p/session/ps_test_1234567890"
 }
 ```
-
-#### CreateCustomerPortal
-Creates a Stripe Customer Portal session for account management.
-
-**Request:**
-```proto
-message CreateCustomerPortalRequest {
-  string user_id = 1;
-  string return_url = 2;
-}
-```
-
-**Response:**
-```proto
-message CreateCustomerPortalResponse {
-  string portal_session_id = 1;
-  string portal_url = 2;
-}
-```
-
-### HTTP Endpoints
 
 #### Webhook Processing
+
 ```http
 POST /webhooks/stripe
 Content-Type: application/json
 Stripe-Signature: <webhook-signature>
 ```
 
-#### Health Check
-```http
-GET /health
-```
-
 ## 🧪 Testing
 
 ### Test Structure
 
-The project includes a comprehensive test suite:
+The project includes comprehensive testing:
 
 #### Mock Repository Tests (Fast)
-Tests that use mock repositories and don't require database connection:
+
 ```bash
-# Run only mock tests (no environment variables needed)
-go test ./cmd/server/ -run "TestBillingService" -v
+# Run tests without database
+go test ./cmd/server/ -v
 ```
 
 #### Database Integration Tests
-Tests that use actual Neon DB database:
+
 ```bash
 # Run tests with real database (requires environment variables)
 DATABASE_URL="postgresql://..." STRIPE_SECRET_KEY="..." \
-  go test ./cmd/server/ -run "TestBillingServiceWithRealDB" -v
-```
-
-### Running All Tests
-
-```bash
-# Mock tests (recommended for development)
-go test ./cmd/server/ -v
-
-# With real database integration
-source .env && go test ./cmd/server/ -v
+  go test ./cmd/server/ -run "TestWithDB" -v
 ```
 
 ### Adding Test Data
 
 Use the seed tool to add test users and subscriptions:
+
 ```bash
 cd cmd/seed && go run main.go
+```
+
+### Testing with cURL
+
+#### Health Check
+
+```bash
+curl http://localhost:8080/health
+```
+
+#### Create Checkout Session
+
+```bash
+curl -X POST http://localhost:8080/api/v1/checkout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user_123",
+    "email": "user@example.com",
+    "product_id": "premium_plan",
+    "price_id": "price_1234567890",
+    "success_url": "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}",
+    "cancel_url": "https://yourapp.com/cancel"
+  }'
+```
+
+#### Get Subscription Status
+
+```bash
+curl http://localhost:8080/api/v1/subscriptions/user_123/premium_plan
+```
+
+#### Test Stripe Webhook
+
+```bash
+curl -X POST http://localhost:8080/webhooks/stripe \
+  -H "Content-Type: application/json" \
+  -H "Stripe-Signature: test" \
+  -d '{"type": "invoice.payment_succeeded"}'
 ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | ✅ | - | Neon DB PostgreSQL connection string |
-| `STRIPE_SECRET_KEY` | ✅ | - | Stripe secret API key |
-| `STRIPE_WEBHOOK_SECRET` | ✅ | - | Stripe webhook signing secret |
-| `GRPC_PORT` | ❌ | `9090` | gRPC server port |
-| `HTTP_PORT` | ❌ | `8080` | HTTP server port |
-| `LOG_LEVEL` | ❌ | `info` | Logging level (debug, info, warn, error) |
+| Variable                | Required | Default | Description                              |
+| ----------------------- | -------- | ------- | ---------------------------------------- |
+| `DATABASE_URL`          | ✅       | -       | Neon DB PostgreSQL connection string     |
+| `STRIPE_SECRET_KEY`     | ✅       | -       | Stripe secret API key                    |
+| `STRIPE_WEBHOOK_SECRET` | ✅       | -       | Stripe webhook signing secret            |
+| `HTTP_PORT`             | ❌       | `8080`  | HTTP server port                         |
+| `LOG_LEVEL`             | ❌       | `info`  | Logging level (debug, info, warn, error) |
 
 ### Database Configuration
 
 The service automatically configures connection pooling:
+
 - **Min Connections:** 5
 - **Max Connections:** 25
 - **Connection Lifetime:** 1 hour
@@ -259,53 +321,65 @@ docker-compose down
 docker build -t styx-billing .
 
 # Run container
-docker run -p 8080:8080 -p 9090:9090 \
+docker run -p 8080:8080 \
   --env-file .env \
   styx-billing
 ```
 
 ## 🔗 Integration Examples
 
-### gRPC Client Example (Go)
+### JavaScript/Node.js
 
-```go
-import (
-    "context"
-    "google.golang.org/grpc"
-    billing "styx/proto/billing_service/proto/billing"
-)
+```javascript
+// Create checkout session
+const response = await fetch("http://localhost:8080/api/v1/checkout", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    user_id: "user_123",
+    email: "user@example.com",
+    product_id: "premium_plan",
+    price_id: "price_1234567890",
+    success_url: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: "https://yourapp.com/cancel",
+  }),
+});
 
-func main() {
-    conn, _ := grpc.Dial("localhost:9090", grpc.WithInsecure())
-    defer conn.Close()
-    
-    client := billing.NewBillingServiceClient(conn)
-    
-    resp, _ := client.CreateSubscriptionCheckout(context.Background(), &billing.CreateSubscriptionCheckoutRequest{
-        UserId:     "user123",
-        ProductId:  "prod_premium",
-        PriceId:    "price_123",
-        SuccessUrl: "https://example.com/success",
-        CancelUrl:  "https://example.com/cancel",
-    })
-    
-    fmt.Printf("Checkout URL: %s\n", resp.CheckoutUrl)
-}
+const { checkout_url } = await response.json();
+window.location.href = checkout_url;
+```
+
+### Python
+
+```python
+import requests
+
+# Get subscription status
+response = requests.get('http://localhost:8080/api/v1/subscriptions/user_123/premium_plan')
+data = response.json()
+
+if data.get('exists'):
+    print(f"Subscription status: {data['status']}")
+else:
+    print("No active subscription")
 ```
 
 ### cURL Examples
 
 #### Health Check
+
 ```bash
 curl http://localhost:8080/health
 ```
 
-#### Test Stripe Webhook
+#### Create Portal Session
+
 ```bash
-curl -X POST http://localhost:8080/webhooks/stripe \
+curl -X POST http://localhost:8080/api/v1/portal \
   -H "Content-Type: application/json" \
-  -H "Stripe-Signature: test" \
-  -d '{"type": "invoice.payment_succeeded"}'
+  -d '{"user_id": "user_123", "return_url": "https://yourapp.com/account"}'
 ```
 
 ## 📊 Monitoring
@@ -322,12 +396,14 @@ The service provides multiple health check endpoints:
 ### Logging
 
 Structured logging with configurable levels:
+
 ```bash
 # Set log level via environment
 LOG_LEVEL=debug go run cmd/server/main.go
 ```
 
 Log levels:
+
 - `debug` - Detailed debugging information
 - `info` - General operational messages
 - `warn` - Warning conditions
@@ -348,21 +424,21 @@ Log levels:
 ```
 styx/
 ├── cmd/
-│   ├── server/          # Main server application
+│   ├── server/          # Main HTTP server application
 │   └── seed/           # Database seeding tool
 ├── internal/
 │   ├── config/         # Configuration management
 │   ├── database/       # Database models and repository
-│   ├── server/         # gRPC service implementation
+│   ├── server/         # HTTP service implementation
 │   └── webhooks/       # Stripe webhook handling
-├── proto/              # Protocol buffer definitions
+├── api/                # API documentation (OpenAPI/Swagger)
 ├── docker-compose.yml  # Docker orchestration
 └── .env.example        # Environment template
 ```
 
 ### Adding New Features
 
-1. **gRPC Methods:** Add to `proto/billing.proto` and regenerate
+1. **HTTP Endpoints:** Add to `internal/server/http.go`
 2. **Database Operations:** Extend `internal/database/repo.go`
 3. **Configuration:** Update `internal/config/config.go`
 4. **Tests:** Add to `cmd/server/main_test.go`
@@ -388,7 +464,7 @@ go vet ./...
 
 ## 📈 Performance
 
-- **gRPC Performance:** Optimized for high-throughput scenarios
+- **HTTP Performance:** Optimized for high-throughput scenarios with proper timeouts
 - **Database Connection Pooling:** Efficient connection management
 - **Concurrent Request Handling:** Goroutine-based processing
 - **Graceful Shutdown:** Proper resource cleanup
@@ -398,6 +474,7 @@ go vet ./...
 ### Common Issues
 
 #### Database Connection Failed
+
 ```bash
 # Check DATABASE_URL format
 echo $DATABASE_URL
@@ -407,6 +484,7 @@ psql "$DATABASE_URL" -c "SELECT 1;"
 ```
 
 #### Environment Variables Not Loaded
+
 ```bash
 # Verify .env file exists
 ls -la .env
@@ -416,6 +494,7 @@ source .env && echo $DATABASE_URL
 ```
 
 #### Stripe API Errors
+
 - Verify `STRIPE_SECRET_KEY` is valid test/production key
 - Check network connectivity to Stripe API
 - Review application logs for specific error messages
@@ -428,6 +507,9 @@ LOG_LEVEL=debug go run cmd/server/main.go
 
 # Run tests with verbose output
 go test ./cmd/server/ -v -count=1
+
+# Use debug endpoint (development only)
+curl http://localhost:8080/debug
 ```
 
 ## 📝 License
@@ -445,10 +527,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 📞 Support
 
 For issues and questions:
+
 - Create an issue on GitHub
 - Check existing documentation
 - Review test examples for usage patterns
 
 ---
 
-**Production Ready:** This microservice has been tested with both mock and real database scenarios, includes comprehensive error handling, and follows Go best practices for production deployment with Neon DB.
+**Production Ready:** This HTTP-only microservice has been designed for universal compatibility and tested with both mock and real database scenarios, includes comprehensive error handling, and follows Go best practices for production deployment with Neon DB.
