@@ -15,18 +15,18 @@ import (
 
 // MockDatabase is a mock implementation of database.RepositoryInterface for testing
 type MockDatabase struct {
-	customers    map[string]*database.Customer
-	subscriptions map[string]*database.Subscription
-	getCustomerError     error
-	createCustomerError  error
-	getSubscriptionError error
+	customers               map[string]*database.Customer
+	subscriptions           map[string]*database.Subscription
+	getCustomerError        error
+	createCustomerError     error
+	getSubscriptionError    error
 	createSubscriptionError error
 	updateSubscriptionError error
 }
 
 func NewMockDatabase() database.RepositoryInterface {
 	return &MockDatabase{
-		customers:    make(map[string]*database.Customer),
+		customers:     make(map[string]*database.Customer),
 		subscriptions: make(map[string]*database.Subscription),
 	}
 }
@@ -190,12 +190,12 @@ func (m *MockDatabase) SetUpdateSubscriptionError(err error) {
 // Test Suite for CreateSubscriptionCheckout
 func TestCreateSubscriptionCheckout(t *testing.T) {
 	tests := []struct {
-		name                string
-		requestBody         map[string]interface{}
-		setupMockDatabase   func(*MockDatabase)
-		expectedStatusCode  int
-		expectedResponse    map[string]interface{}
-		expectedError       string
+		name               string
+		requestBody        map[string]interface{}
+		setupMockDatabase  func(database.RepositoryInterface)
+		expectedStatusCode int
+		expectedResponse   map[string]interface{}
+		expectedError      string
 	}{
 		{
 			name: "Valid checkout request",
@@ -207,60 +207,62 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				"success_url": "https://example.com/success",
 				"cancel_url":  "https://example.com/cancel",
 			},
-			setupMockDatabase: func(m *MockDatabase) {
-				m.AddTestCustomer(&database.Customer{
-					UserID:           "user123",
-					Email:            "test@example.com",
-					StripeCustomerID: "cus_test123",
-					CreatedAt:        time.Now(),
-					UpdatedAt:        time.Now(),
-				})
+			setupMockDatabase: func(db database.RepositoryInterface) {
+				if mockDB, ok := db.(*MockDatabase); ok {
+					mockDB.AddTestCustomer(&database.Customer{
+						UserID:           "user123",
+						Email:            "test@example.com",
+						StripeCustomerID: "cus_test123",
+						CreatedAt:        time.Now(),
+						UpdatedAt:        time.Now(),
+					})
+				}
 			},
 			expectedStatusCode: http.StatusOK,
 		},
 		{
-			name:               "Missing user_id",
-			requestBody:         map[string]interface{}{
+			name: "Missing user_id",
+			requestBody: map[string]interface{}{
 				"email":       "test@example.com",
 				"product_id":  "premium_plan",
 				"price_id":    "price_test123",
 				"success_url": "https://example.com/success",
 				"cancel_url":  "https://example.com/cancel",
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Missing required fields",
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Missing required fields",
 		},
 		{
-			name:               "Invalid JSON body",
-			requestBody:         map[string]interface{}{
+			name: "Invalid JSON body",
+			requestBody: map[string]interface{}{
 				"user_id": "user123",
 				"invalid": make(chan int), // Unmarshallable type
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Invalid request body",
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Invalid request body",
 		},
 		{
 			name: "Empty request body",
 			requestBody: map[string]interface{}{
-				"user_id": "",
-				"email":   "",
-				"product_id": "",
-				"price_id": "",
+				"user_id":     "",
+				"email":       "",
+				"product_id":  "",
+				"price_id":    "",
 				"success_url": "",
-				"cancel_url": "",
+				"cancel_url":  "",
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Missing required fields",
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Missing required fields",
 		},
 		{
 			name:               "Method not allowed",
-			requestBody:         nil,
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusMethodNotAllowed,
-			expectedError:       "Method not allowed",
+			requestBody:        nil,
+			setupMockDatabase:  func(db database.RepositoryInterface) {},
+			expectedStatusCode: http.StatusMethodNotAllowed,
+			expectedError:      "Method not allowed",
 		},
 	}
 
@@ -269,7 +271,7 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 			// Setup
 			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
-			
+
 			server := NewHTTPServer(mockDB, "sk_test_123")
 
 			// Create request
@@ -279,7 +281,11 @@ func TestCreateSubscriptionCheckout(t *testing.T) {
 				req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
 			} else {
-				req = httptest.NewRequest(tt.requestBody["method"].(string), "/api/v1/checkout", nil)
+				if method, ok := tt.requestBody["method"].(string); ok {
+					req = httptest.NewRequest(method, "/api/v1/checkout", nil)
+				} else {
+					req = httptest.NewRequest(http.MethodPost, "/api/v1/checkout", nil)
+				}
 			}
 
 			// Execute
@@ -327,9 +333,9 @@ func TestGetSubscriptionStatus(t *testing.T) {
 		expectedError      string
 	}{
 		{
-			name:               "Valid subscription request",
-			path:               "/api/v1/subscriptions/user123/premium_plan",
-			setupMockDatabase:  func(m *MockDatabase) {
+			name: "Valid subscription request",
+			path: "/api/v1/subscriptions/user123/premium_plan",
+			setupMockDatabase: func(m *MockDatabase) {
 				m.AddTestSubscription(&database.Subscription{
 					UserID:               "user123",
 					ProductID:            "premium_plan",
@@ -384,7 +390,7 @@ func TestGetSubscriptionStatus(t *testing.T) {
 			// Setup
 			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
-			
+
 			server := NewHTTPServer(mockDB, "sk_test_123")
 
 			// Create request
@@ -436,12 +442,12 @@ func TestGetSubscriptionStatus(t *testing.T) {
 // Test Suite for CreateCustomerPortal
 func TestCreateCustomerPortal(t *testing.T) {
 	tests := []struct {
-		name                string
-		requestBody         map[string]interface{}
-		setupMockDatabase   func(*MockDatabase)
-		expectedStatusCode  int
-		expectedResponse    map[string]interface{}
-		expectedError       string
+		name               string
+		requestBody        map[string]interface{}
+		setupMockDatabase  func(*MockDatabase)
+		expectedStatusCode int
+		expectedResponse   map[string]interface{}
+		expectedError      string
 	}{
 		{
 			name: "Valid portal request",
@@ -461,35 +467,35 @@ func TestCreateCustomerPortal(t *testing.T) {
 			expectedStatusCode: http.StatusOK,
 		},
 		{
-			name:               "Missing user_id",
+			name: "Missing user_id",
 			requestBody: map[string]interface{}{
 				"return_url": "https://example.com/account",
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Missing required fields",
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Missing required fields",
 		},
 		{
-			name:               "Missing return_url",
+			name: "Missing return_url",
 			requestBody: map[string]interface{}{
 				"user_id": "user123",
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Missing required fields",
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Missing required fields",
 		},
 		{
-			name:               "Customer not found",
+			name: "Customer not found",
 			requestBody: map[string]interface{}{
 				"user_id":    "nonexistent",
 				"return_url": "https://example.com/account",
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusNotFound,
-			expectedError:       "Customer not found",
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusNotFound,
+			expectedError:      "Customer not found",
 		},
 		{
-			name:               "Customer has no Stripe customer ID",
+			name: "Customer has no Stripe customer ID",
 			requestBody: map[string]interface{}{
 				"user_id":    "user123",
 				"return_url": "https://example.com/account",
@@ -507,21 +513,21 @@ func TestCreateCustomerPortal(t *testing.T) {
 			expectedError:      "Customer has no Stripe customer ID",
 		},
 		{
-			name:               "Invalid JSON body",
+			name: "Invalid JSON body",
 			requestBody: map[string]interface{}{
-				"user_id":    "user123",
-				"invalid":    make(chan int),
+				"user_id": "user123",
+				"invalid": make(chan int),
 			},
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusBadRequest,
-			expectedError:       "Invalid request body",
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedError:      "Invalid request body",
 		},
 		{
 			name:               "Method not allowed",
-			requestBody:         nil,
-			setupMockDatabase:   func(m *MockDatabase) {},
-			expectedStatusCode:  http.StatusMethodNotAllowed,
-			expectedError:       "Method not allowed",
+			requestBody:        nil,
+			setupMockDatabase:  func(m *MockDatabase) {},
+			expectedStatusCode: http.StatusMethodNotAllowed,
+			expectedError:      "Method not allowed",
 		},
 	}
 
@@ -530,7 +536,7 @@ func TestCreateCustomerPortal(t *testing.T) {
 			// Setup
 			mockDB := NewMockDatabase()
 			tt.setupMockDatabase(mockDB)
-			
+
 			server := NewHTTPServer(mockDB, "sk_test_123")
 
 			// Create request
@@ -659,7 +665,7 @@ func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
 	})
 
 	server := NewHTTPServer(mockDB, "sk_test_123")
-	
+
 	requestBody := map[string]interface{}{
 		"user_id":     "benchmark-user",
 		"email":       "benchmark@example.com",
@@ -674,7 +680,7 @@ func BenchmarkCreateSubscriptionCheckout(b *testing.B) {
 		bodyBytes, _ := json.Marshal(requestBody)
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout", bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		w := httptest.NewRecorder()
 		server.CreateSubscriptionCheckout(w, req)
 	}
