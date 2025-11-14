@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,23 +14,19 @@ import (
 	"styx/internal/database"
 	"styx/internal/server"
 	"styx/internal/webhooks"
-	billing "styx/proto"
 	"github.com/jackc/pgx/v5"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
-// Server handles the orchestration of gRPC and HTTP servers
+// Server handles the HTTP-only billing service
 type Server struct {
-	config         *config.Config
-	grpcServer     *grpc.Server
-	httpServer     *http.Server
-	db             *database.Repository
-	billingService *server.BillingService
+	config        *config.Config
+	httpServer    *http.Server
+	db            *database.Repository
+	apiServer     *server.HTTPServer
 	webhookHandler *webhooks.StripeWebhookHandler
 }
 
-// NewServer creates a new server instance
+// NewServer creates a new HTTP-only server instance
 func NewServer(cfg *config.Config) (*Server, error) {
 	// Initialize database connection
 	db, err := initDatabase(cfg)
@@ -40,8 +34,8 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	// Initialize billing service
-	billingService := server.NewBillingService(db, cfg.StripeSecretKey)
+	// Initialize HTTP API server
+	apiServer := server.NewHTTPServer(db, cfg.StripeSecretKey)
 
 	// Initialize webhook handler
 	webhookHandler := webhooks.NewStripeWebhookHandler(db, cfg.StripeSecretKey, cfg.StripeWebhookSecret)
@@ -49,7 +43,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	return &Server{
 		config:         cfg,
 		db:             db,
-		billingService: billingService,
+		apiServer:      apiServer,
 		webhookHandler: webhookHandler,
 	}, nil
 }
@@ -75,39 +69,12 @@ func initDatabase(cfg *config.Config) (*database.Repository, error) {
 	return repo, nil
 }
 
-// StartGRPCServer starts the gRPC server
-func (s *Server) StartGRPCServer() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.GRPCPort))
-	if err != nil {
-		return fmt.Errorf("failed to listen on gRPC port %d: %w", s.config.GRPCPort, err)
-	}
-
-	// Create gRPC server with reflection for debugging
-	s.grpcServer = grpc.NewServer()
-	
-	// Register billing service
-	billing.RegisterBillingServiceServer(s.grpcServer, s.billingService)
-	
-	// Enable reflection for debugging
-	reflection.Register(s.grpcServer)
-
-	log.Printf("Starting gRPC server on port %d", s.config.GRPCPort)
-	
-	go func() {
-		if err := s.grpcServer.Serve(lis); err != nil {
-			log.Printf("gRPC server error: %v", err)
-		}
-	}()
-
-	return nil
-}
-
-// StartHTTPServer starts the HTTP server for webhooks and health checks
+// StartHTTPServer starts the HTTP server with all endpoints
 func (s *Server) StartHTTPServer() error {
 	mux := http.NewServeMux()
 	
-	// Set up routes
-	s.setupRoutes(mux)
+	// Set up API routes
+	s.setupAPIRoutes(mux)
 	
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.config.HTTPPort),
@@ -128,70 +95,59 @@ func (s *Server) StartHTTPServer() error {
 	return nil
 }
 
-// setupRoutes sets up HTTP routes
-func (s *Server) setupRoutes(mux *http.ServeMux) {
-	// Health check endpoint
-	mux.HandleFunc("/health", s.healthCheckHandler)
+// setupAPIRoutes sets up all HTTP routes for the billing API
+func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
+	// Health check
+	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 	
-	// Stripe webhook endpoint
+	// Billing API endpoints
+	mux.HandleFunc("POST /api/v1/checkout", s.apiServer.CreateSubscriptionCheckout)
+	mux.HandleFunc("GET /api/v1/subscriptions/{user_id}/{product_id}", s.apiServer.GetSubscriptionStatus)
+	mux.HandleFunc("POST /api/v1/portal", s.apiServer.CreateCustomerPortal)
+	
+	// Webhook endpoint
 	s.webhookHandler.SetupRoutes(mux)
 	
 	// Debug endpoint (development only)
-	if true { // Default to enabled for now
+	if os.Getenv("ENVIRONMENT") != "production" {
 		mux.HandleFunc("/debug", s.debugHandler)
 	}
 }
 
 // debugHandler provides debug information
 func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	info := map[string]interface{}{
-		"service": "billing-service",
-		"status":  "running",
-		"time":    time.Now().UTC().Format(time.RFC3339),
+		"service":         "billing-service",
+		"status":          "running",
+		"time":           time.Now().UTC().Format(time.RFC3339),
+		"environment":    os.Getenv("ENVIRONMENT", "development"),
+		"database_url":   "configured",
+		"stripe_key":     "configured",
 	}
 	
-	jsonData, _ := json.Marshal(info)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	
+	jsonData, _ := json.Marshal(info)
 	w.Write(jsonData)
 }
 
-// healthCheckHandler handles health check requests
-func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	
-	// Check webhook handler health
-	if err := s.webhookHandler.HealthCheck(); err != nil {
-		log.Printf("Health check failed: webhook handler error: %v", err)
-		http.Error(w, `{"status": "unhealthy", "error": "webhook handler failed"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	// Return healthy status
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "healthy", "timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `"}`))
-}
-
-// Start starts all servers
+// Start starts the HTTP server
 func (s *Server) Start() error {
-	log.Printf("Starting billing service")
+	log.Printf("Starting billing service (HTTP-only)")
 	
-	// Start servers
-	if err := s.StartGRPCServer(); err != nil {
-		return fmt.Errorf("failed to start gRPC server: %w", err)
-	}
-
+	// Start HTTP server
 	if err := s.StartHTTPServer(); err != nil {
 		return fmt.Errorf("failed to start HTTP server: %w", err)
 	}
 
-	log.Println("All servers started successfully")
+	log.Println("HTTP server started successfully")
 	return nil
 }
 
-// Stop gracefully shuts down all servers
+// Stop gracefully shuts down the server
 func (s *Server) Stop() error {
-	log.Println("Shutting down servers...")
+	log.Println("Shutting down server...")
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -205,21 +161,15 @@ func (s *Server) Stop() error {
 		}
 	}
 
-	// Shutdown gRPC server
-	if s.grpcServer != nil {
-		log.Println("Shutting down gRPC server...")
-		s.grpcServer.GracefulStop()
-	}
-
-	log.Println("Servers shutdown complete")
+	log.Println("Server shutdown complete")
 	return nil
 }
 
 // Run runs the server with graceful shutdown handling
 func (s *Server) Run() error {
-	// Start servers
+	// Start server
 	if err := s.Start(); err != nil {
-		return fmt.Errorf("failed to start servers: %w", err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	// Set up signal handling for graceful shutdown
@@ -244,7 +194,7 @@ func main() {
 	// Print configuration (remove sensitive data)
 	log.Printf("Configuration loaded:")
 	log.Printf("  HTTP Port: %d", cfg.HTTPPort)
-	log.Printf("  gRPC Port: %d", cfg.GRPCPort)
+	log.Printf("  Environment: %s", os.Getenv("ENVIRONMENT", "development"))
 	log.Printf("  Log Level: %s", cfg.LogLevel)
 
 	// Create and run server
