@@ -10,8 +10,10 @@ import (
 	billing "styx/proto"
 
 	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
+	"github.com/stripe/stripe-go/v72/billingportal/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -51,6 +53,12 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	if req.PriceId == "" {
 		return nil, status.Error(codes.InvalidArgument, "price_id is required")
 	}
+	if req.SuccessUrl == "" {
+		return nil, status.Error(codes.InvalidArgument, "success_url is required")
+	}
+	if req.CancelUrl == "" {
+		return nil, status.Error(codes.InvalidArgument, "cancel_url is required")
+	}
 
 	// Find or create Stripe customer using the email field
 	stripeCustomerID, err := s.findOrCreateStripeCustomer(ctx, req.UserId, req.Email)
@@ -59,14 +67,31 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 		return nil, status.Error(codes.Internal, "failed to create or find customer")
 	}
 
-	// Create a mock checkout session for demonstration purposes
-	// In a real implementation, you would use Stripe's Checkout Session API
-	checkoutSessionID := fmt.Sprintf("cs_%s_%d", req.UserId, time.Now().Unix())
-	checkoutURL := fmt.Sprintf("https://checkout.stripe.com/pay/%s?key=%s", checkoutSessionID, s.stripeSecret)
-	
-	checkoutSession := &stripe.CheckoutSession{
-		ID:  checkoutSessionID,
-		URL: checkoutURL,
+	// Create real Stripe Checkout Session
+	checkoutParams := &session.CheckoutSessionParams{
+		Customer:  stripe.String(stripeCustomerID),
+		Mode:      stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*session.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(req.PriceId),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		SuccessURL:            stripe.String(req.SuccessUrl),
+		CancelURL:             stripe.String(req.CancelUrl),
+		ClientReferenceID:     stripe.String(req.UserId),
+		AllowPromotionCodes:   stripe.Bool(true),
+		BillingAddressCollection: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionRequired)),
+	}
+
+	// Add metadata
+	checkoutParams.AddMetadata("user_id", req.UserId)
+	checkoutParams.AddMetadata("product_id", req.ProductId)
+
+	checkoutSession, err := session.New(checkoutParams)
+	if err != nil {
+		log.Printf("Failed to create Stripe checkout session for user %s: %v", req.UserId, err)
+		return nil, status.Errorf(codes.Internal, "failed to create checkout session: %v", err)
 	}
 
 	log.Printf("Created Stripe checkout session: %s for user: %s with Stripe customer: %s", checkoutSession.ID, req.UserId, stripeCustomerID)
@@ -121,6 +146,11 @@ func (s *BillingService) GetSubscriptionStatus(ctx context.Context, req *billing
 func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.CreateCustomerPortalRequest) (*billing.CreateCustomerPortalResponse, error) {
 	log.Printf("CreateCustomerPortal called for user: %s", req.UserId)
 
+	// Validate required fields
+	if req.ReturnUrl == "" {
+		return nil, status.Error(codes.InvalidArgument, "return_url is required")
+	}
+
 	// Get user's Stripe customer ID
 	customer, err := s.db.GetCustomerByUserID(ctx, req.UserId)
 	if err != nil {
@@ -132,16 +162,82 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 		return nil, status.Error(codes.FailedPrecondition, "customer has no Stripe customer ID")
 	}
 
-	// For now, create a mock portal session URL that would point to Stripe's actual portal
-	// In production, this would use Stripe's Customer Portal API
-	portalSessionID := fmt.Sprintf("ps_%s_%d", req.UserId, time.Now().Unix())
-	portalURL := fmt.Sprintf("https://billing.stripe.com/p/session/%s?key=%s", portalSessionID, s.stripeSecret)
+	// Create real Stripe Billing Portal session
+	portalParams := &billingportal.SessionParams{
+		Customer:  stripe.String(customer.StripeCustomerID),
+		ReturnURL: stripe.String(req.ReturnUrl),
+	}
 
-	log.Printf("Created Stripe portal session: %s for user: %s", portalSessionID, req.UserId)
+	portalSession, err := billingportal.Session.New(portalParams)
+	if err != nil {
+		log.Printf("Failed to create Stripe portal session for customer %s: %v", customer.StripeCustomerID, err)
+		return nil, status.Errorf(codes.Internal, "failed to create portal session: %v", err)
+	}
+
+	log.Printf("Created Stripe portal session: %s for user: %s", portalSession.ID, req.UserId)
 
 	return &billing.CreateCustomerPortalResponse{
-		PortalSessionId: portalSessionID,
-		PortalUrl:       portalURL,
+		PortalSessionId: portalSession.ID,
+		PortalUrl:       portalSession.URL,
+	}, nil
+}
+
+// CancelSubscription cancels a user's subscription
+func (s *BillingService) CancelSubscription(ctx context.Context, req *billing.CancelSubscriptionRequest) (*billing.CancelSubscriptionResponse, error) {
+	log.Printf("CancelSubscription called for user: %s, product: %s", req.UserId, req.ProductId)
+
+	// Validate required fields
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	if req.ProductId == "" {
+		return nil, status.Error(codes.InvalidArgument, "product_id is required")
+	}
+
+	// Get user's subscription from database
+	stripeSubID, _, _, exists, err := s.db.GetSubscriptionStatus(ctx, req.UserId, req.ProductId)
+	if err != nil {
+		log.Printf("Failed to get subscription status from database: %v", err)
+		return nil, status.Error(codes.Internal, "failed to get subscription status")
+	}
+
+	if !exists {
+		return nil, status.Error(codes.NotFound, "subscription not found")
+	}
+
+	// Cancel the Stripe subscription
+	cancelParams := &sub.CancelParams{
+		InvoiceNow: stripe.Bool(req.InvoiceNow),
+		Prorate:    stripe.Bool(req.Prorate),
+	}
+
+	// If not specified, use default values
+	if !req.InvoiceNow {
+		cancelParams.InvoiceNow = stripe.Bool(false)
+	}
+	if !req.Prorate {
+		cancelParams.Prorate = stripe.Bool(true)
+	}
+
+	cancelledSubscription, err := sub.Cancel(stripeSubID, cancelParams)
+	if err != nil {
+		log.Printf("Failed to cancel Stripe subscription %s: %v", stripeSubID, err)
+		return nil, status.Errorf(codes.Internal, "failed to cancel subscription: %v", err)
+	}
+
+	// Update database with cancellation status
+	err = s.db.UpdateSubscriptionStatus(ctx, req.UserId, req.ProductId, "cancelled")
+	if err != nil {
+		log.Printf("Failed to update subscription status in database: %v", err)
+		// Don't return error here as Stripe cancellation succeeded
+	}
+
+	log.Printf("Cancelled Stripe subscription: %s for user: %s", cancelledSubscription.ID, req.UserId)
+
+	return &billing.CancelSubscriptionResponse{
+		SubscriptionId: cancelledSubscription.ID,
+		Status:         string(cancelledSubscription.Status),
+		CanceledAt:     timestamppb.New(time.Unix(cancelledSubscription.CanceledAt, 0)),
 	}, nil
 }
 
