@@ -19,12 +19,12 @@ import (
 
 // HTTPServer provides HTTP REST API for billing operations
 type HTTPServer struct {
-	db           *database.Repository
+	db           database.RepositoryInterface
 	stripeSecret string
 }
 
 // NewHTTPServer creates a new HTTP server instance
-func NewHTTPServer(db *database.Repository, stripeSecret string) *HTTPServer {
+func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPServer {
 	stripe.Key = stripeSecret
 
 	return &HTTPServer{
