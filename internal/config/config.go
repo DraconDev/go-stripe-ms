@@ -17,9 +17,7 @@ type Config struct {
 	StripeWebhookSecret string
 
 	// Server Configuration
-	GRPCPort int
 	HTTPPort int
-
 
 	// Logging
 	LogLevel string
@@ -36,9 +34,7 @@ func LoadConfig() (*Config, error) {
 		StripeWebhookSecret: getEnvOrError("STRIPE_WEBHOOK_SECRET"),
 		
 		// Ports
-		GRPCPort: getEnvAsInt("GRPC_PORT", 9090),
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
-		
 		
 		// Logging
 		LogLevel: getEnvOrError("LOG_LEVEL"),
