@@ -16,12 +16,15 @@ service BillingService {
   
   // CreateCustomerPortal creates a Stripe customer portal session for subscription management
   rpc CreateCustomerPortal(CreateCustomerPortalRequest) returns (CreateCustomerPortalResponse);
+
+  // CancelSubscription cancels a user's subscription
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
 }
 
 // Request to create a subscription checkout session
 message CreateSubscriptionCheckoutRequest {
   string user_id = 1;      // Your internal User ID.
-  string email = 2;        // The user's email, provided by the calling service.
+  string email = 2;        // ***** THE CRITICAL ADDITION ***** The user's email, provided by the calling service.
   string product_id = 3;   // The internal product ID, e.g., "logalyzer".
   string price_id = 4;     // The specific Stripe Price ID, e.g., "price_123abc...".
   string success_url = 5;  // URL to redirect on successful checkout.
@@ -59,4 +62,19 @@ message CreateCustomerPortalRequest {
 message CreateCustomerPortalResponse {
   string portal_session_id = 1;  // Stripe portal session ID
   string portal_url = 2;         // URL to access the customer portal
+}
+
+// Request to cancel a subscription
+message CancelSubscriptionRequest {
+  string user_id = 1;    // User identifier
+  string product_id = 2; // Product identifier
+  bool invoice_now = 3;  // Whether to invoice the customer immediately
+  bool prorate = 4;      // Whether to prorate the cancellation
+}
+
+// Response containing cancellation details
+message CancelSubscriptionResponse {
+  string subscription_id = 1;      // Stripe subscription ID
+  string status = 2;               // Subscription status after cancellation
+  google.protobuf.Timestamp canceled_at = 3;  // Cancellation timestamp
 }
