@@ -13,7 +13,7 @@ import (
 	"styx/internal/database"
 )
 
-// MockDatabase is a mock implementation of database.Repository for testing
+// MockDatabase is a mock implementation of database.RepositoryInterface for testing
 type MockDatabase struct {
 	customers    map[string]*database.Customer
 	subscriptions map[string]*database.Subscription
@@ -24,7 +24,7 @@ type MockDatabase struct {
 	updateSubscriptionError error
 }
 
-func NewMockDatabase() *MockDatabase {
+func NewMockDatabase() database.RepositoryInterface {
 	return &MockDatabase{
 		customers:    make(map[string]*database.Customer),
 		subscriptions: make(map[string]*database.Subscription),
