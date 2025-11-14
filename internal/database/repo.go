@@ -9,6 +9,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// RepositoryInterface defines the interface for database operations
+type RepositoryInterface interface {
+	FindOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error)
+	UpdateCustomerStripeID(ctx context.Context, userID, stripeCustomerID string) error
+	GetSubscriptionStatus(ctx context.Context, userID, productID string) (string, string, time.Time, bool, error)
+	CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error
+	UpdateSubscriptionStatus(ctx context.Context, stripeSubID, status string, periodEnd time.Time) error
+	GetCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error)
+	GetCustomerByUserID(ctx context.Context, userID string) (*Customer, error)
+	GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error)
+	InitializeTables(ctx context.Context) error
+}
+
 // Repository handles all database operations for billing service
 type Repository struct {
 	db *pgx.Conn
