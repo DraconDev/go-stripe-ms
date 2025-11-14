@@ -13,7 +13,7 @@ import (
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
-	billingportal "github.com/stripe/stripe-go/v72/billing_portal/session"
+	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -68,10 +68,10 @@ func (s *BillingService) CreateSubscriptionCheckout(ctx context.Context, req *bi
 	}
 
 	// Create real Stripe Checkout Session
-	checkoutParams := &checkoutsession.CheckoutSessionParams{
+	checkoutParams := &stripe.CheckoutSessionParams{
 		Customer:  stripe.String(stripeCustomerID),
 		Mode:      stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		LineItems: []*checkoutsession.CheckoutSessionLineItemParams{
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(req.PriceId),
 				Quantity: stripe.Int64(1),
@@ -163,15 +163,15 @@ func (s *BillingService) CreateCustomerPortal(ctx context.Context, req *billing.
 	}
 
 	// Create real Stripe Billing Portal session
-	portalParams := &billingportal.SessionParams{
+	portalParams := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(customer.StripeCustomerID),
 		ReturnURL: stripe.String(req.ReturnUrl),
 	}
 
-	portalSession, err := billingportal.Session.New(portalParams)
+	portalSession, err := billingportalsession.New(portalParams)
 	if err != nil {
 		log.Printf("Failed to create Stripe portal session for customer %s: %v", customer.StripeCustomerID, err)
-		return nil, status.Errorf(codes.Internal, "failed to portal session: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to create portal session: %v", err)
 	}
 
 	log.Printf("Created Stripe portal session: %s for user: %s", portalSession.ID, req.UserId)
