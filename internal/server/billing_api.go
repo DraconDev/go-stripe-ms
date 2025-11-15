@@ -20,17 +20,17 @@ import (
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/product"
 	"github.com/stripe/stripe-go/v72/price"
+	"github.com/stripe/stripe-go/v72/product"
 	"github.com/stripe/stripe-go/v72/sub"
 )
 
 // Simple rate limiter for basic protection
 type RateLimiter struct {
-	mu           sync.RWMutex
-	requests     map[string][]time.Time
-	limit        int
-	window       time.Duration
+	mu       sync.RWMutex
+	requests map[string][]time.Time
+	limit    int
+	window   time.Duration
 }
 
 func NewRateLimiter(requestsPerMinute int) *RateLimiter {
@@ -81,11 +81,11 @@ func validateEmail(email string) error {
 	if email == "" {
 		return &ValidationError{Field: "email", Message: "email is required"}
 	}
-	
+
 	if _, err := mail.ParseAddress(email); err != nil {
 		return &ValidationError{Field: "email", Message: "invalid email format"}
 	}
-	
+
 	return nil
 }
 
@@ -93,13 +93,13 @@ func validateURL(url string) error {
 	if url == "" {
 		return &ValidationError{Field: "url", Message: "url is required"}
 	}
-	
+
 	// Basic URL validation
 	_, err := net.LookupHost(strings.TrimPrefix(url, "https://"))
 	if err != nil {
 		return &ValidationError{Field: "url", Message: "invalid URL"}
 	}
-	
+
 	return nil
 }
 
@@ -114,24 +114,24 @@ func validateUserID(userID string) error {
 	if err := validateRequiredString(userID, "user_id"); err != nil {
 		return err
 	}
-	
+
 	// Basic format validation
 	userIDRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 	if !userIDRegex.MatchString(userID) {
 		return &ValidationError{Field: "user_id", Message: "user_id must contain only alphanumeric characters, hyphens, and underscores"}
 	}
-	
+
 	if len(userID) > 100 {
 		return &ValidationError{Field: "user_id", Message: "user_id must be less than 100 characters"}
 	}
-	
+
 	return nil
 }
 
 // Enhanced error response
 type ErrorResponse struct {
-	Error   ErrorDetail `json:"error"`
-	Meta    ErrorMeta   `json:"meta,omitempty"`
+	Error ErrorDetail `json:"error"`
+	Meta  ErrorMeta   `json:"meta,omitempty"`
 }
 
 type ErrorDetail struct {
@@ -151,14 +151,14 @@ type ErrorMeta struct {
 func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, message, description, field, requestID, environment string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	// Add security headers
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
 	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-	
+
 	response := ErrorResponse{
 		Error: ErrorDetail{
 			Type:        errorType,
@@ -173,7 +173,7 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, 
 			Environment: environment,
 		},
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -394,9 +394,9 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		UserID     string `json:"user_id"`
-		Email      string `json:"email"`
-		Items      []struct {
+		UserID string `json:"user_id"`
+		Email  string `json:"email"`
+		Items  []struct {
 			PriceID   string `json:"price_id"`
 			Quantity  int64  `json:"quantity"`
 			ProductID string `json:"product_id,omitempty"`
@@ -450,9 +450,9 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 
 	// Create cart checkout session
 	checkoutParams := &stripe.CheckoutSessionParams{
-		Customer: stripe.String(stripeCustomerID),
-		Mode:     stripe.String(string(stripe.CheckoutSessionModePayment)),
-		LineItems: lineItems,
+		Customer:                 stripe.String(stripeCustomerID),
+		Mode:                     stripe.String(string(stripe.CheckoutSessionModePayment)),
+		LineItems:                lineItems,
 		SuccessURL:               stripe.String(req.SuccessURL),
 		CancelURL:                stripe.String(req.CancelURL),
 		ClientReferenceID:        stripe.String(req.UserID),
@@ -768,10 +768,10 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		ProductID   string `json:"product_id"`
-		Currency    string `json:"currency"`
-		UnitAmount  int64  `json:"unit_amount"`
-		Recurring   struct {
+		ProductID  string `json:"product_id"`
+		Currency   string `json:"currency"`
+		UnitAmount int64  `json:"unit_amount"`
+		Recurring  struct {
 			Interval string `json:"interval"`
 			Count    int64  `json:"count"`
 		} `json:"recurring"`
@@ -791,9 +791,9 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 
 	// Create price in Stripe
 	priceParams := &stripe.PriceParams{
-		Product:     stripe.String(req.ProductID),
-		Currency:    stripe.String(strings.ToLower(req.Currency)),
-		UnitAmount:  stripe.Int64(req.UnitAmount),
+		Product:    stripe.String(req.ProductID),
+		Currency:   stripe.String(strings.ToLower(req.Currency)),
+		UnitAmount: stripe.Int64(req.UnitAmount),
 	}
 
 	if req.Recurring.Interval != "" {
@@ -810,11 +810,11 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
-		ID             string `json:"id"`
-		ProductID      string `json:"product_id"`
-		Currency       string `json:"currency"`
-		UnitAmount     int64  `json:"unit_amount"`
-		Recurring      *struct {
+		ID         string `json:"id"`
+		ProductID  string `json:"product_id"`
+		Currency   string `json:"currency"`
+		UnitAmount int64  `json:"unit_amount"`
+		Recurring  *struct {
 			Interval string `json:"interval"`
 		} `json:"recurring,omitempty"`
 		Created int64 `json:"created"`
@@ -873,7 +873,7 @@ func (s *HTTPServer) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	iterator := product.List(params)
 	productList := make([]map[string]interface{}, 0)
-	
+
 	for iterator.Next() {
 		product := iterator.Product()
 		productData := map[string]interface{}{
