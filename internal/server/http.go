@@ -1,3 +1,200 @@
+
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/mail"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	"styx/internal/database"
+
+	"github.com/stripe/stripe-go/v72"
+	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
+	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
+	"github.com/stripe/stripe-go/v72/customer"
+	"github.com/stripe/stripe-go/v72/sub"
+)
+
+// Simple rate limiter for basic protection
+type RateLimiter struct {
+	mu           sync.RWMutex
+	requests     map[string][]time.Time
+	limit        int
+	window       time.Duration
+}
+
+func NewRateLimiter(requestsPerMinute int) *RateLimiter {
+	return &RateLimiter{
+		requests: make(map[string][]time.Time),
+		limit:    requestsPerMinute,
+		window:   time.Minute,
+	}
+}
+
+func (rl *RateLimiter) Allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	requests := rl.requests[ip]
+
+	// Remove old requests outside the window
+	var validRequests []time.Time
+	for _, reqTime := range requests {
+		if now.Sub(reqTime) <= rl.window {
+			validRequests = append(validRequests, reqTime)
+		}
+	}
+
+	// Check limit
+	if len(validRequests) >= rl.limit {
+		return false
+	}
+
+	// Add current request
+	validRequests = append(validRequests, now)
+	rl.requests[ip] = validRequests
+	return true
+}
+
+// Enhanced input validation
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("validation error for field '%s': %s", e.Field, e.Message)
+}
+
+func validateEmail(email string) error {
+	if email == "" {
+		return &ValidationError{Field: "email", Message: "email is required"}
+	}
+	
+	if _, err := mail.ParseAddress(email); err != nil {
+		return &ValidationError{Field: "email", Message: "invalid email format"}
+	}
+	
+	return nil
+}
+
+func validateURL(url string) error {
+	if url == "" {
+		return &ValidationError{Field: "url", Message: "url is required"}
+	}
+	
+	// Basic URL validation
+	_, err := net.LookupHost(strings.TrimPrefix(url, "https://"))
+	if err != nil {
+		return &ValidationError{Field: "url", Message: "invalid URL"}
+	}
+	
+	return nil
+}
+
+func validateRequiredString(value, fieldName string) error {
+	if value == "" {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("%s is required", fieldName)}
+	}
+	return nil
+}
+
+func validateUserID(userID string) error {
+	if err := validateRequiredString(userID, "user_id"); err != nil {
+		return err
+	}
+	
+	// Basic format validation
+	userIDRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !userIDRegex.MatchString(userID) {
+		return &ValidationError{Field: "user_id", Message: "user_id must contain only alphanumeric characters, hyphens, and underscores"}
+	}
+	
+	if len(userID) > 100 {
+		return &ValidationError{Field: "user_id", Message: "user_id must be less than 100 characters"}
+	}
+	
+	return nil
+}
+
+// Enhanced error response
+type ErrorResponse struct {
+	Error   ErrorDetail `json:"error"`
+	Meta    ErrorMeta   `json:"meta,omitempty"`
+}
+
+type ErrorDetail struct {
+	Type        string `json:"type"`
+	Code        string `json:"code"`
+	Message     string `json:"message"`
+	Description string `json:"description,omitempty"`
+	Field       string `json:"field,omitempty"`
+}
+
+type ErrorMeta struct {
+	RequestID   string    `json:"request_id"`
+	Timestamp   time.Time `json:"timestamp"`
+	Environment string    `json:"environment,omitempty"`
+}
+
+func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, message, description, field, requestID, environment string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	
+	// Add security headers
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	
+	response := ErrorResponse{
+		Error: ErrorDetail{
+			Type:        errorType,
+			Code:        code,
+			Message:     message,
+			Description: description,
+			Field:       field,
+		},
+		Meta: ErrorMeta{
+			RequestID:   requestID,
+			Timestamp:   time.Now(),
+			Environment: environment,
+		},
+	}
+	
+	json.NewEncoder(w).Encode(response)
+}
+
+func writeValidationError(w http.ResponseWriter, field, message, requestID, environment string) {
+	writeErrorResponse(w, http.StatusBadRequest, "validation_error", "VALIDATION_FAILED", 
+		"Request validation failed", message, field, requestID, environment)
+}
+
+func writeAuthenticationError(w http.ResponseWriter, message, requestID, environment string) {
+	writeErrorResponse(w, http.StatusUnauthorized, "authentication_error", "AUTHENTICATION_REQUIRED", 
+		message, "Valid API key required", "", requestID, environment)
+}
+
+func writeNotFoundError(w http.ResponseWriter, message, requestID, environment string) {
+	writeErrorResponse(w, http.StatusNotFound, "not_found", "RESOURCE_NOT_FOUND", 
+		message, "The requested resource was not found", "", requestID, environment)
+}
+
+func writeRateLimitError(w http.ResponseWriter, requestID, environment string) {
+	w.Header().Set("Retry-After", "60")
+	writeErrorResponse(w, http.StatusTooManyRequests, "rate_limit_error", "RATE_LIMIT_EXCEEDED", 
+		"Too many requests", "Please try again later", "", requestID, environment)
+}
 package server
 
 import (
