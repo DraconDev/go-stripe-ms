@@ -243,7 +243,8 @@ paths:
                 quantity:
                   type: integer
                   minimum: 1
-                  description: Quantity to purchase (default: 1)
+                  description: Quantity to purchase
+                  default: 1
                   example: 1
                 success_url:
                   type: string
