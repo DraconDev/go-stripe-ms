@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"styx/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/database"
 )
 
 // TestCreateSubscriptionCheckoutIntegration tests with real database

@@ -1,15 +1,15 @@
 openapi: 3.1.0
 info:
-  title: Styx Billing Service API
+  title: github.com/DraconDev/go-stripe-ms Billing Service API
   description: |
     HTTP-only payment microservice for handling Stripe subscription billing.
-    
+
     ## Features
     - Create Stripe Checkout Sessions for subscription purchases
     - Retrieve subscription status from database and Stripe
     - Generate Stripe Customer Portal sessions for account management
     - Process Stripe webhooks for subscription lifecycle events
-    
+
     ## Architecture
     - **HTTP-only**: Universal compatibility with any application
     - **Webhook-driven**: Subscription state managed through Stripe webhooks
@@ -35,7 +35,7 @@ paths:
       tags:
         - Health
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             application/json:
@@ -102,7 +102,7 @@ paths:
                   description: URL to redirect on cancelled checkout
                   example: "https://yourapp.com/cancel"
       responses:
-        '200':
+        "200":
           description: Checkout session created successfully
           content:
             application/json:
@@ -118,10 +118,10 @@ paths:
                     format: uri
                     description: URL to complete the checkout
                     example: "https://checkout.stripe.com/pay/cs_test_1234567890"
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/v1/subscriptions/{user_id}/{product_id}:
     get:
@@ -147,17 +147,17 @@ paths:
             type: string
             example: "premium_plan"
       responses:
-        '200':
+        "200":
           description: Subscription status retrieved successfully
           content:
             application/json:
               oneOf:
-                - $ref: '#/components/schemas/SubscriptionExists'
-                - $ref: '#/components/schemas/SubscriptionNotExists'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                - $ref: "#/components/schemas/SubscriptionExists"
+                - $ref: "#/components/schemas/SubscriptionNotExists"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/v1/portal:
     post:
@@ -187,7 +187,7 @@ paths:
                   description: URL to return to after portal session
                   example: "https://yourapp.com/account"
       responses:
-        '200':
+        "200":
           description: Portal session created successfully
           content:
             application/json:
@@ -203,19 +203,19 @@ paths:
                     format: uri
                     description: URL to access the customer portal
                     example: "https://billing.stripe.com/p/session/ps_test_1234567890"
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /webhooks/stripe:
     post:
       summary: Stripe webhook endpoint
       description: |
         Processes Stripe webhook events for subscription lifecycle management.
-        
+
         ## Supported Events
         - `customer.subscription.created` - New subscription created
         - `customer.subscription.updated` - Subscription status changed
@@ -242,7 +242,7 @@ paths:
                   type: object
                   description: Event data payload
       responses:
-        '200':
+        "200":
           description: Webhook processed successfully
           content:
             application/json:
@@ -297,7 +297,16 @@ components:
         status:
           type: string
           description: Subscription status
-          enum: [active, canceled, past_due, incomplete, incomplete_expired, trialing, unpaid]
+          enum:
+            [
+              active,
+              canceled,
+              past_due,
+              incomplete,
+              incomplete_expired,
+              trialing,
+              unpaid,
+            ]
           example: "active"
         customer_id:
           type: string

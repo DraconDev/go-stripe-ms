@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"styx/internal/config"
-	"styx/internal/database"
-	"styx/internal/server"
-	"styx/internal/webhooks"
+	"github.com/DraconDev/go-stripe-ms/internal/config"
+	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/server"
+	"github.com/DraconDev/go-stripe-ms/internal/webhooks"
 	"github.com/jackc/pgx/v5"
 )
 

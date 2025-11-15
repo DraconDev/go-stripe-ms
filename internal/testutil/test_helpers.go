@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"styx/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/database"
 )
 
 // HTTPTestRequest represents a test HTTP request with expected response

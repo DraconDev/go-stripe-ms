@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"styx/internal/config"
-	"styx/internal/database"
-	
+	"github.com/DraconDev/go-stripe-ms/internal/config"
+	"github.com/DraconDev/go-stripe-ms/internal/database"
+
 	"github.com/jackc/pgx/v5"
 )
 
