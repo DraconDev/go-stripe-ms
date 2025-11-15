@@ -1,14 +1,22 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
-// Config holds all application configuration
+// Config holds all application configuration for production-ready multi-tenant service
 type Config struct {
+	// Multi-tenancy
+	TenantID string
+	Environment string
+
 	// Database
 	DatabaseURL string
 
@@ -18,26 +26,87 @@ type Config struct {
 
 	// Server Configuration
 	HTTPPort int
+	ReadTimeout time.Duration
+	WriteTimeout time.Duration
+	IdleTimeout time.Duration
+
+	// Security & Authentication
+	APIKeys map[string]APIKeyConfig
+	CORSAllowedOrigins []string
+
+	// Rate Limiting
+	RateLimitRequestsPerMinute int
+	RateLimitBurstSize int
 
 	// Logging
 	LogLevel string
+	EnableStructuredLogging bool
+
+	// Monitoring
+	EnableMetrics bool
+	MetricsPort int
+
+	// Health Checks
+	HealthCheckTimeout time.Duration
+	DatabaseHealthCheck bool
+
+	// Retry Configuration
+	WebhookRetryAttempts int
+	WebhookRetryDelay time.Duration
 }
 
-// LoadConfig loads configuration from environment variables
+// APIKeyConfig holds API key configuration for different tenants/endpoints
+type APIKeyConfig struct {
+	Name      string   `json:"name"`
+	KeyHash   string   `json:"-"`
+	Scopes    []string `json:"scopes"`
+	RateLimit int      `json:"rate_limit"`
+	Enabled   bool     `json:"enabled"`
+}
+
+// LoadConfig loads configuration from environment variables with multi-tenant support
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
+		// Multi-tenancy
+		TenantID: getEnvOrDefault("TENANT_ID", "default"),
+		Environment: getEnvOrDefault("ENVIRONMENT", "development"),
+		
 		// Database
 		DatabaseURL: getEnvOrError("DATABASE_URL"),
-
+		
 		// Stripe
 		StripeSecretKey:     getEnvOrError("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: getEnvOrError("STRIPE_WEBHOOK_SECRET"),
-
-		// Ports
+		
+		// Server Configuration
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
+		ReadTimeout: time.Duration(getEnvAsInt("READ_TIMEOUT_SECONDS", 30)) * time.Second,
+		WriteTimeout: time.Duration(getEnvAsInt("WRITE_TIMEOUT_SECONDS", 30)) * time.Second,
+		IdleTimeout: time.Duration(getEnvAsInt("IDLE_TIMEOUT_SECONDS", 120)) * time.Second,
+
+		// Security & Authentication
+		APIKeys: parseAPIKeys(),
+		CORSAllowedOrigins: parseCSVEnv("CORS_ALLOWED_ORIGINS", []string{"*"}),
+
+		// Rate Limiting
+		RateLimitRequestsPerMinute: getEnvAsInt("RATE_LIMIT_REQUESTS_PER_MINUTE", 60),
+		RateLimitBurstSize: getEnvAsInt("RATE_LIMIT_BURST_SIZE", 10),
 
 		// Logging
-		LogLevel: getEnvOrError("LOG_LEVEL"),
+		LogLevel: getEnvOrDefault("LOG_LEVEL", "info"),
+		EnableStructuredLogging: getEnvAsBool("ENABLE_STRUCTURED_LOGGING", true),
+
+		// Monitoring
+		EnableMetrics: getEnvAsBool("ENABLE_METRICS", true),
+		MetricsPort: getEnvAsInt("METRICS_PORT", 9090),
+
+		// Health Checks
+		HealthCheckTimeout: time.Duration(getEnvAsInt("HEALTH_CHECK_TIMEOUT_SECONDS", 5)) * time.Second,
+		DatabaseHealthCheck: getEnvAsBool("DATABASE_HEALTH_CHECK", true),
+
+		// Retry Configuration
+		WebhookRetryAttempts: getEnvAsInt("WEBHOOK_RETRY_ATTEMPTS", 3),
+		WebhookRetryDelay: time.Duration(getEnvAsInt("WEBHOOK_RETRY_DELAY_SECONDS", 5)) * time.Second,
 	}
 
 	return cfg, nil
@@ -46,6 +115,14 @@ func LoadConfig() (*Config, error) {
 // getEnv retrieves an environment variable, returns empty string if not set
 func getEnv(key string) string {
 	return os.Getenv(key)
+}
+
+// getEnvOrDefault retrieves an environment variable or returns default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 // getEnvOrError retrieves an environment variable and logs an error if missing
@@ -63,33 +140,14 @@ func getEnvAsInt(key string, defaultValue int) int {
 	if value == "" {
 		return defaultValue
 	}
-
+	
 	intValue, err := strconv.Atoi(value)
 	if err != nil {
 		log.Printf("Warning: Invalid integer value for %s, using default: %d", key, defaultValue)
 		return defaultValue
 	}
-
+	
 	return intValue
-}
-
-// GetDatabasePoolConfig returns pgx pool configuration
-func (c *Config) GetDatabasePoolConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"connString":        c.DatabaseURL,
-		"minConns":          5,
-		"maxConns":          25,
-		"maxConnLifetime":   time.Hour,
-		"maxConnIdleTime":   time.Minute * 30,
-		"healthCheckPeriod": time.Minute * 5,
-	}
-
-// getEnvOrDefault retrieves an environment variable or returns default value
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 // getEnvAsBool retrieves an environment variable as a boolean
@@ -197,6 +255,23 @@ func (c *Config) IsDevelopment() bool {
 	return c.Environment == "development"
 }
 
+// GetDatabasePoolConfig returns pgx pool configuration
+func (c *Config) GetDatabasePoolConfig() map[string]interface{} {
+	maxConns := 25
+	if c.IsProduction() {
+		maxConns = 50
+	}
+	
+	return map[string]interface{}{
+		"connString":          c.DatabaseURL,
+		"minConns":            5,
+		"maxConns":            maxConns,
+		"maxConnLifetime":     time.Hour,
+		"maxConnIdleTime":     time.Minute * 30,
+		"healthCheckPeriod":   time.Minute * 5,
+	}
+}
+
 // GetAPILimits returns rate limiting configuration for a given scope
 func (c *Config) GetAPILimits(scope string) (int, int) {
 	// Check if specific API key has custom limits
@@ -210,5 +285,4 @@ func (c *Config) GetAPILimits(scope string) (int, int) {
 	
 	// Return default limits
 	return c.RateLimitRequestsPerMinute, c.RateLimitBurstSize
-}
 }
