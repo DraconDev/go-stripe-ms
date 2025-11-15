@@ -100,7 +100,7 @@ func validateURL(url string) error {
 		return &ValidationError{Field: "url", Message: "invalid URL"}
 	}
 	
-	return nil
+			return nil
 }
 
 func validateRequiredString(value, fieldName string) error {
