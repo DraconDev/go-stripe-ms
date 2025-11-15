@@ -28,7 +28,7 @@ The billing service is production-ready with HTTP-only architecture and we've cr
 ### Phase 0: Checkout Architecture Enhancement (Immediate)
 - [ ] **Separate Checkout Endpoints** - Split `/api/v1/checkout` into multiple routes
 - [ ] **Subscription Checkout** - `POST /api/v1/checkout/subscription` (current SaaS model)
-- [ ] **One-time Payment Checkout** - `POST /api/v1/checkout/payment` (ebooks, courses)
+- [ ] **One-time Payment Checkout** - `POST /api/v1/checkout/item` (ebooks, courses)
 - [ ] **Cart Checkout** - `POST /api/v1/checkout/cart` (e-commerce with multiple items)
 - [ ] **Cart Management** - Add endpoints for cart operations
 - [ ] **Update Documentation** - Reflect new API structure
