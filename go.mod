@@ -1,4 +1,4 @@
-module https://github.com/DraconDev/go-stripe-ms
+module github.com/DraconDev/go-stripe-ms
 
 go 1.22
 
