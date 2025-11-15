@@ -607,7 +607,6 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 	if req.Recurring.Interval != "" {
 		priceParams.Recurring = &stripe.PriceRecurringParams{
 			Interval: stripe.String(req.Recurring.Interval),
-			Count:    stripe.Int64(req.Recurring.Count),
 		}
 	}
 
@@ -625,13 +624,12 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 		UnitAmount     int64  `json:"unit_amount"`
 		Recurring      *struct {
 			Interval string `json:"interval"`
-			Count    int64  `json:"count"`
-		} `json:"recurring"`
+		} `json:"recurring,omitempty"`
 		Created int64 `json:"created"`
 	}{
 		ID:         price.ID,
-		ProductID:  price.Product.ID,
-		Currency:   price.Currency,
+		ProductID:  string(price.Product.ID),
+		Currency:   string(price.Currency),
 		UnitAmount: price.UnitAmount,
 		Created:    price.Created,
 	}
@@ -639,10 +637,8 @@ func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
 	if price.Recurring != nil {
 		response.Recurring = &struct {
 			Interval string `json:"interval"`
-			Count    int64  `json:"count"`
 		}{
-			Interval: price.Recurring.Interval,
-			Count:    price.Recurring.Count,
+			Interval: string(price.Recurring.Interval),
 		}
 	}
 
