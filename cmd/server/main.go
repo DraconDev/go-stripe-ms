@@ -21,10 +21,10 @@ import (
 
 // Server handles the HTTP-only billing service
 type Server struct {
-	config        *config.Config
-	httpServer    *http.Server
-	db            *database.Repository
-	apiServer     *server.HTTPServer
+	config         *config.Config
+	httpServer     *http.Server
+	db             *database.Repository
+	apiServer      *server.HTTPServer
 	webhookHandler *webhooks.StripeWebhookHandler
 }
 
@@ -53,7 +53,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 // initDatabase initializes the database connection
 func initDatabase(cfg *config.Config) (*database.Repository, error) {
 	log.Printf("Using database URL: %s", cfg.DatabaseURL)
-	
+
 	// Connect to the actual database
 	conn, err := pgx.Connect(context.Background(), cfg.DatabaseURL)
 	if err != nil {
@@ -67,17 +67,17 @@ func initDatabase(cfg *config.Config) (*database.Repository, error) {
 	}
 
 	log.Println("Database connection initialized successfully")
-	
+
 	return repo, nil
 }
 
 // StartHTTPServer starts the HTTP server with all endpoints
 func (s *Server) StartHTTPServer() error {
 	mux := http.NewServeMux()
-	
+
 	// Set up API routes
 	s.setupAPIRoutes(mux)
-	
+
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.config.HTTPPort),
 		Handler:      mux,
@@ -87,7 +87,7 @@ func (s *Server) StartHTTPServer() error {
 	}
 
 	log.Printf("Starting HTTP server on port %d", s.config.HTTPPort)
-	
+
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("HTTP server error: %v", err)
@@ -101,19 +101,19 @@ func (s *Server) StartHTTPServer() error {
 func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	// Health check
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
-	
+
 	// Checkout endpoints - split by payment type
 	mux.HandleFunc("POST /api/v1/checkout/subscription", s.apiServer.CreateSubscriptionCheckout)
 	mux.HandleFunc("POST /api/v1/checkout/item", s.apiServer.CreateItemCheckout)
 	mux.HandleFunc("POST /api/v1/checkout/cart", s.apiServer.CreateCartCheckout)
-	
+
 	// Billing API endpoints
 	mux.HandleFunc("GET /api/v1/subscriptions/{user_id}/{product_id}", s.apiServer.GetSubscriptionStatus)
 	mux.HandleFunc("POST /api/v1/portal", s.apiServer.CreateCustomerPortal)
-	
+
 	// Webhook endpoint
 	s.webhookHandler.SetupRoutes(mux)
-	
+
 	// Debug endpoint (development only)
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" {
@@ -127,19 +127,19 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 // debugHandler provides debug information
 func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
 	info := map[string]interface{}{
-		"service":         "billing-service",
-		"status":          "running",
-		"time":           time.Now().UTC().Format(time.RFC3339),
-		"environment":    getEnvironment(),
-		"database_url":   "configured",
-		"stripe_key":     "configured",
+		"service":      "billing-service",
+		"status":       "running",
+		"time":         time.Now().UTC().Format(time.RFC3339),
+		"environment":  getEnvironment(),
+		"database_url": "configured",
+		"stripe_key":   "configured",
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	jsonData, _ := json.Marshal(info)
-	if _,err := w.Write(jsonData); err != nil {
+	if _, err := w.Write(jsonData); err != nil {
 		log.Printf("Error writing debug response: %v", err)
 	}
 }
@@ -156,7 +156,7 @@ func getEnvironment() string {
 // Start starts the HTTP server
 func (s *Server) Start() error {
 	log.Printf("Starting billing service (HTTP-only)")
-	
+
 	// Start HTTP server
 	if err := s.StartHTTPServer(); err != nil {
 		return fmt.Errorf("failed to start HTTP server: %w", err)
@@ -196,7 +196,7 @@ func (s *Server) Run() error {
 	// Set up signal handling for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	// Wait for shutdown signal
 	<-quit
 	log.Println("Received shutdown signal")
@@ -205,11 +205,11 @@ func (s *Server) Run() error {
 	return s.Stop()
 }
 
-// Load .env file
-		if err := godotenv.Load(); err != nil {
+func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using system environment variables")
 	}
-func main() {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
