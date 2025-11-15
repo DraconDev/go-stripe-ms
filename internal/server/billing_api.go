@@ -502,7 +502,12 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response for cart checkout: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+		return
+	}
 }
 
 // GetSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
