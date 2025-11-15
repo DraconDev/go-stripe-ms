@@ -17,6 +17,7 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/webhooks"
 	"github.com/jackc/pgx/v5"
 )
+"github.com/joho/godotenv"
 
 // Server handles the HTTP-only billing service
 type Server struct {
