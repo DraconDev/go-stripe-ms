@@ -174,7 +174,11 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, 
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding error response: %v", err)
+		// Fallback to a plain text error if JSON encoding fails
+		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
+	}
 }
 
 func writeValidationError(w http.ResponseWriter, field, message, requestID, environment string) {
