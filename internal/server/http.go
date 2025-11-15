@@ -1,68 +1,3 @@
-
-package server
-
-import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"net/mail"
-	"regexp"
-	"strings"
-	"sync"
-	"time"
-
-	"styx/internal/config"
-	"styx/internal/database"
-	"github.com/stripe/stripe-go/v72"
-	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
-	"github.com/stripe/stripe-go/v72/customer"
-	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
-	"github.com/stripe/stripe-go/v72/sub"
-)
-
-// RateLimiter implements basic token bucket rate limiting
-type RateLimiter struct {
-	tokens    map[string]int
-	maxTokens map[string]int
-	lastRefill map[string]time.Time
-	mu        sync.RWMutex
-}
-
-// RequestContext holds request metadata
-type RequestContext struct {
-	RequestID    string
-	TenantID     string
-	Environment  string
-	ClientIP     string
-	APIKeyName   string
-}
-
-// ErrorResponse represents standardized error responses
-type ErrorResponse struct {
-	Error   ErrorDetail `json:"error"`
-	Meta    ErrorMeta   `json:"meta,omitempty"`
-}
-
-// ErrorDetail contains error information
-type ErrorDetail struct {
-	Type        string `json:"type"`
-	Code        string `json:"code"`
-	Message     string `json:"message"`
-	Description string `json:"description,omitempty"`
-	Field       string `json:"field,omitempty"`
-}
-
-// ErrorMeta contains additional error metadata
-type ErrorMeta struct {
-	RequestID   string    `json:"request_id"`
-	Timestamp   time.Time `json:"timestamp"`
-	TenantID    string    `json:"tenant_id"`
-	Environment string    `json:"environment"`
-}
 package server
 
 import (
@@ -75,10 +10,11 @@ import (
 	"time"
 
 	"styx/internal/database"
+
 	"github.com/stripe/stripe-go/v72"
+	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
-	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	"github.com/stripe/stripe-go/v72/sub"
 )
 
@@ -121,8 +57,8 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	}
 
 	// Validate required fields
-	if req.UserID == "" || req.Email == "" || req.ProductID == "" || 
-	   req.PriceID == "" || req.SuccessURL == "" || req.CancelURL == "" {
+	if req.UserID == "" || req.Email == "" || req.ProductID == "" ||
+		req.PriceID == "" || req.SuccessURL == "" || req.CancelURL == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -139,18 +75,18 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 
 	// Create real Stripe Checkout Session
 	checkoutParams := &stripe.CheckoutSessionParams{
-		Customer:  stripe.String(stripeCustomerID),
-		Mode:      stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		Customer: stripe.String(stripeCustomerID),
+		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(req.PriceID),
 				Quantity: stripe.Int64(1),
 			},
 		},
-		SuccessURL:            stripe.String(req.SuccessURL),
-		CancelURL:             stripe.String(req.CancelURL),
-		ClientReferenceID:     stripe.String(req.UserID),
-		AllowPromotionCodes:   stripe.Bool(true),
+		SuccessURL:               stripe.String(req.SuccessURL),
+		CancelURL:                stripe.String(req.CancelURL),
+		ClientReferenceID:        stripe.String(req.UserID),
+		AllowPromotionCodes:      stripe.Bool(true),
 		BillingAddressCollection: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionRequired)),
 	}
 
@@ -190,7 +126,7 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 	// Extract user_id and product_id from URL path
 	// Expected format: /api/v1/subscriptions/{user_id}/{product_id}
 	path := r.URL.Path
-	
+
 	// Remove the base path
 	expectedPrefix := "/api/v1/subscriptions/"
 	if !strings.HasPrefix(path, expectedPrefix) {
@@ -199,7 +135,7 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	subPath := path[len(expectedPrefix):]
-	
+
 	// Split by "/" to get user_id and product_id
 	segments := strings.Split(subPath, "/")
 	if len(segments) != 2 || segments[0] == "" || segments[1] == "" {
