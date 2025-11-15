@@ -138,7 +138,9 @@ func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	
 	jsonData, _ := json.Marshal(info)
-	w.Write(jsonData)
+	if _,err := w.Write(jsonData); err != nil {
+		log.Printf("Error writing debug response: %v", err)
+	}
 }
 
 // getEnvironment returns the current environment with default
