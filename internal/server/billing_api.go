@@ -96,7 +96,7 @@ func validateURL(url string) error {
 	
 	// Basic URL validation
 	_, err := net.LookupHost(strings.TrimPrefix(url, "https://"))
-	if err != nil {
+			if err != nil {
 		return &ValidationError{Field: "url", Message: "invalid URL"}
 	}
 	
