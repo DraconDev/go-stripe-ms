@@ -326,5 +326,223 @@ func (s *HTTPServer) findOrCreateStripeCustomer(ctx context.Context, userID, ema
 	}
 
 	log.Printf("Created new Stripe customer: %s for user: %s", stripeCustomer.ID, userID)
+
+// CreateProduct handles POST /api/v1/products to create new Stripe products
+func (s *HTTPServer) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Active      bool   `json:"active"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding product request: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Basic validation
+	if req.Name == "" {
+		http.Error(w, "Product name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Create product in Stripe
+	productParams := &stripe.ProductParams{
+		Name:        stripe.String(req.Name),
+		Active:      stripe.Bool(req.Active),
+		Description: stripe.String(req.Description),
+	}
+
+	product, err := product.New(productParams)
+	if err != nil {
+		log.Printf("Failed to create Stripe product: %v", err)
+		http.Error(w, "Failed to create product", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Active      bool   `json:"active"`
+		Created     int64  `json:"created"`
+	}{
+		ID:          product.ID,
+		Name:        product.Name,
+		Description: product.Description,
+		Active:      product.Active,
+		Created:     product.Created,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+// CreatePrice handles POST /api/v1/prices to create new Stripe prices
+func (s *HTTPServer) CreatePrice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		ProductID   string `json:"product_id"`
+		Currency    string `json:"currency"`
+		UnitAmount  int64  `json:"unit_amount"`
+		Recurring   struct {
+			Interval string `json:"interval"`
+			Count    int64  `json:"count"`
+		} `json:"recurring"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding price request: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Basic validation
+	if req.ProductID == "" || req.Currency == "" || req.UnitAmount <= 0 {
+		http.Error(w, "Product ID, currency, and positive unit amount are required", http.StatusBadRequest)
+		return
+	}
+
+	// Create price in Stripe
+	priceParams := &stripe.PriceParams{
+		Product:     stripe.String(req.ProductID),
+		Currency:    stripe.String(strings.ToLower(req.Currency)),
+		UnitAmount:  stripe.Int64(req.UnitAmount),
+	}
+
+	if req.Recurring.Interval != "" {
+		priceParams.Recurring = &stripe.PriceRecurringParams{
+			Interval: stripe.String(req.Recurring.Interval),
+			Count:    stripe.Int64(req.Recurring.Count),
+		}
+	}
+
+	price, err := price.New(priceParams)
+	if err != nil {
+		log.Printf("Failed to create Stripe price: %v", err)
+		http.Error(w, "Failed to create price", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		ID             string `json:"id"`
+		ProductID      string `json:"product_id"`
+		Currency       string `json:"currency"`
+		UnitAmount     int64  `json:"unit_amount"`
+		Recurring      *struct {
+			Interval string `json:"interval"`
+			Count    int64  `json:"count"`
+		} `json:"recurring"`
+		Created int64 `json:"created"`
+	}{
+		ID:         price.ID,
+		ProductID:  price.Product.ID,
+		Currency:   price.Currency,
+		UnitAmount: price.UnitAmount,
+		Created:    price.Created,
+	}
+
+	if price.Recurring != nil {
+		response.Recurring = &struct {
+			Interval string `json:"interval"`
+			Count    int64  `json:"count"`
+		}{
+			Interval: price.Recurring.Interval,
+			Count:    price.Recurring.Count,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetProducts handles GET /api/v1/products to list Stripe products
+func (s *HTTPServer) GetProducts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse query parameters
+	limit := 10
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+
+	active := ""
+	if activeStr := r.URL.Query().Get("active"); activeStr != "" {
+		if activeStr == "true" || activeStr == "false" {
+			active = activeStr
+		}
+	}
+
+	// List products from Stripe
+	params := &stripe.ProductListParams{
+		Limit: stripe.Int64(limit),
+	}
+
+	if active != "" {
+		activeBool := active == "true"
+		params.Active = stripe.Bool(activeBool)
+	}
+
+	products, err := product.List(params)
+	if err != nil {
+		log.Printf("Failed to list Stripe products: %v", err)
+		http.Error(w, "Failed to list products", http.StatusInternalServerError)
+		return
+	}
+
+	type ProductListItem struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Active      bool   `json:"active"`
+		Created     int64  `json:"created"`
+		Updated     int64  `json:"updated"`
+	}
+
+	productList := make([]ProductListItem, 0, len(products.Data))
+	for _, product := range products.Data {
+		productList = append(productList, ProductListItem{
+			ID:          product.ID,
+			Name:        product.Name,
+			Description: product.Description,
+			Active:      product.Active,
+			Created:     product.Created,
+			Updated:     product.Updated,
+		})
+	}
+
+	response := struct {
+		Data       []ProductListItem `json:"data"`
+		HasMore    bool              `json:"has_more"`
+		Object     string            `json:"object"`
+		TotalCount int64             `json:"total_count"`
+	}{
+		Data:       productList,
+		HasMore:    products.HasMore,
+		Object:     "list",
+		TotalCount: products.TotalCount,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
 	return stripeCustomer.ID, nil
 }
