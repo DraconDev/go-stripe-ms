@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This Stripe payment microservice is a **production-ready, HTTP-only billing service** that has been successfully migrated from gRPC to HTTP for universal compatibility. It's exceptionally well-architected with clean separation of concerns, comprehensive testing, and excellent reusability potential.
+This Stripe payment microservice is a **production-ready, HTTP-only billing service** built with universal compatibility in mind. It's exceptionally well-architected with clean separation of concerns, comprehensive testing, and excellent reusability potential.
 
 ## 🏗️ Architecture Overview
 
