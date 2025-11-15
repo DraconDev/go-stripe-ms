@@ -671,7 +671,8 @@ func (s *HTTPServer) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	// List products from Stripe
 	params := &stripe.ProductListParams{}
-	params.Limit = int64(limit)
+	limitValue := int64(limit)
+	params.Limit = &limitValue
 
 	if active != "" {
 		activeBool := active == "true"
