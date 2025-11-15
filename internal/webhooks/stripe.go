@@ -8,9 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"styx/internal/database"
 	"time"
 
-	"styx/internal/database"
 	"github.com/stripe/stripe-go/v72"
 )
 
