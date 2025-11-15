@@ -845,7 +845,6 @@ func (s *HTTPServer) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for product creation: %v", err)
 		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
