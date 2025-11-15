@@ -609,7 +609,12 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response for subscription status: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+		return
+	}
 }
 
 // CreateCustomerPortal handles POST /api/v1/portal
@@ -675,7 +680,12 @@ func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response for customer portal: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+		return
+	}
 }
 
 // HealthCheck handles GET /health
