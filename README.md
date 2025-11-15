@@ -6,9 +6,9 @@ A comprehensive **HTTP-only** Go microservice for handling Stripe subscription b
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 
-## ✅ Migration Complete: gRPC → HTTP
+## ✅ Architecture: HTTP-Only Design
 
-This service has been successfully converted from a gRPC-based architecture to a pure HTTP REST API, providing universal compatibility with any application while maintaining all functionality.
+This service is built with a pure HTTP REST API architecture, providing universal compatibility with any application while maintaining all functionality.
 
 ## 🚀 Features
 
