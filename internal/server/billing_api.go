@@ -89,7 +89,7 @@ func validateEmail(email string) error {
 	return nil
 }
 
-func validateURL(url string) error {
+		func validateURL(url string) error {
 	if url == "" {
 		return &ValidationError{Field: "url", Message: "url is required"}
 	}
