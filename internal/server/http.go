@@ -1,3 +1,68 @@
+
+package server
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"net/mail"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	"styx/internal/config"
+	"styx/internal/database"
+	"github.com/stripe/stripe-go/v72"
+	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
+	"github.com/stripe/stripe-go/v72/customer"
+	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
+	"github.com/stripe/stripe-go/v72/sub"
+)
+
+// RateLimiter implements basic token bucket rate limiting
+type RateLimiter struct {
+	tokens    map[string]int
+	maxTokens map[string]int
+	lastRefill map[string]time.Time
+	mu        sync.RWMutex
+}
+
+// RequestContext holds request metadata
+type RequestContext struct {
+	RequestID    string
+	TenantID     string
+	Environment  string
+	ClientIP     string
+	APIKeyName   string
+}
+
+// ErrorResponse represents standardized error responses
+type ErrorResponse struct {
+	Error   ErrorDetail `json:"error"`
+	Meta    ErrorMeta   `json:"meta,omitempty"`
+}
+
+// ErrorDetail contains error information
+type ErrorDetail struct {
+	Type        string `json:"type"`
+	Code        string `json:"code"`
+	Message     string `json:"message"`
+	Description string `json:"description,omitempty"`
+	Field       string `json:"field,omitempty"`
+}
+
+// ErrorMeta contains additional error metadata
+type ErrorMeta struct {
+	RequestID   string    `json:"request_id"`
+	Timestamp   time.Time `json:"timestamp"`
+	TenantID    string    `json:"tenant_id"`
+	Environment string    `json:"environment"`
+}
 package server
 
 import (
