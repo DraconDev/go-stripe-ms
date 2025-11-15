@@ -109,7 +109,9 @@ func (h *StripeWebhookHandler) processEvent(ctx context.Context, w http.Response
 
 	// Always return 200 OK to acknowledge receipt
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "processed"}`))
+	if err := w.Write([]byte(`{"status": "processed"}`));  err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
 }
 
 // handleCustomerSubscriptionCreated processes subscription creation events
