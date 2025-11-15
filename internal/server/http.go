@@ -507,6 +507,8 @@ func (s *HTTPServer) findOrCreateStripeCustomer(ctx context.Context, userID, ema
 	}
 
 	log.Printf("Created new Stripe customer: %s for user: %s", stripeCustomer.ID, userID)
+	return stripeCustomer.ID, nil
+}
 
 // CreateProduct handles POST /api/v1/products to create new Stripe products
 func (s *HTTPServer) CreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -724,6 +726,4 @@ func (s *HTTPServer) GetProducts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
-}
-	return stripeCustomer.ID, nil
 }
