@@ -101,8 +101,15 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	// Health check
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 	
-	// Billing API endpoints
+	// Checkout endpoints - split by payment type
+	mux.HandleFunc("POST /api/v1/checkout/subscription", s.apiServer.CreateSubscriptionCheckout)
+	mux.HandleFunc("POST /api/v1/checkout/item", s.apiServer.CreateItemCheckout)
+	mux.HandleFunc("POST /api/v1/checkout/cart", s.apiServer.CreateCartCheckout)
+	
+	// Legacy subscription endpoint (keeping for backward compatibility)
 	mux.HandleFunc("POST /api/v1/checkout", s.apiServer.CreateSubscriptionCheckout)
+	
+	// Billing API endpoints
 	mux.HandleFunc("GET /api/v1/subscriptions/{user_id}/{product_id}", s.apiServer.GetSubscriptionStatus)
 	mux.HandleFunc("POST /api/v1/portal", s.apiServer.CreateCustomerPortal)
 	
