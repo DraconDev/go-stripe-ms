@@ -1,6 +1,6 @@
 # Styx Billing Microservice (HTTP-Only)
 
-A comprehensive **HTTP-only** Go microservice for handling Stripe subscription billing with **Neon DB**, REST API, and webhook event processing. Successfully migrated from gRPC to HTTP for universal compatibility.
+A comprehensive **HTTP-only** Go microservice for handling Stripe subscription billing with **Neon DB**, REST API, and webhook event processing. Built for universal compatibility.
 
 ![Go](https://img.shields.io/badge/Go-1.22-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
