@@ -557,7 +557,12 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 			Exists: false,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Error encoding response for subscription status (not exists): %v", err)
+			writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+				"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+			return
+		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("Error encoding response for subscription status (not exists): %v", err)
 			writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
