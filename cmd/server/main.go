@@ -100,6 +100,9 @@ func (s *Server) StartHTTPServer() error {
 // setupAPIRoutes sets up all HTTP routes for the billing API
 func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	// Health check
+// Root endpoint
+	mux.HandleFunc("/", s.apiServer.RootHandler)
+	
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 
 	// Checkout endpoints - split by payment type

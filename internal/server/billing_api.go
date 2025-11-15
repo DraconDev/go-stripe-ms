@@ -294,7 +294,13 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response for subscription checkout: %v", err)
+		// Fallback to a generic error if encoding fails
+		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+		return
+	}
 }
 
 // CreateItemCheckout handles POST /api/v1/checkout/item for one-time purchases
