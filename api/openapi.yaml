@@ -52,14 +52,18 @@ paths:
                     type: string
                     example: billing-service
 
+  # Legacy checkout endpoint (subscription only) - for backward compatibility
   /api/v1/checkout:
     post:
-      summary: Create subscription checkout session
+      summary: Create subscription checkout session (legacy)
       description: |
+        **DEPRECATED**: Use `/api/v1/checkout/subscription` instead.
+        
         Creates a Stripe Checkout Session for subscription purchases.
         This endpoint handles customer creation/retrieval and session generation.
       tags:
         - Billing
+      deprecated: true
       requestBody:
         required: true
         content:
@@ -118,6 +122,246 @@ paths:
                     format: uri
                     description: URL to complete the checkout
                     example: "https://checkout.stripe.com/pay/cs_test_1234567890"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # New separated checkout endpoints
+  /api/v1/checkout/subscription:
+    post:
+      summary: Create subscription checkout session
+      description: |
+        Creates a Stripe Checkout Session for subscription purchases.
+        Supports recurring billing for SaaS applications.
+        This endpoint handles customer creation/retrieval and session generation.
+      tags:
+        - Billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - email
+                - product_id
+                - price_id
+                - success_url
+                - cancel_url
+              properties:
+                user_id:
+                  type: string
+                  description: Your internal user identifier
+                  example: "user_123"
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                product_id:
+                  type: string
+                  description: Internal product identifier
+                  example: "premium_plan"
+                price_id:
+                  type: string
+                  description: Stripe Price ID (e.g., price_123abc...)
+                  example: "price_1234567890"
+                success_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on successful checkout
+                  example: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}"
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on cancelled checkout
+                  example: "https://yourapp.com/cancel"
+      responses:
+        "200":
+          description: Subscription checkout session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_session_id:
+                    type: string
+                    description: Stripe checkout session ID
+                    example: "cs_test_1234567890"
+                  checkout_url:
+                    type: string
+                    format: uri
+                    description: URL to complete the checkout
+                    example: "https://checkout.stripe.com/pay/cs_test_1234567890"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/checkout/item:
+    post:
+      summary: Create one-time payment checkout session
+      description: |
+        Creates a Stripe Checkout Session for one-time purchases.
+        Perfect for digital products, ebooks, courses, etc.
+        Supports quantity selection for bulk purchases.
+      tags:
+        - Billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - email
+                - product_id
+                - price_id
+                - success_url
+                - cancel_url
+              properties:
+                user_id:
+                  type: string
+                  description: Your internal user identifier
+                  example: "user_123"
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                product_id:
+                  type: string
+                  description: Internal product identifier
+                  example: "ebook_premium"
+                price_id:
+                  type: string
+                  description: Stripe Price ID (e.g., price_123abc...)
+                  example: "price_1234567890"
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: Quantity to purchase (default: 1)
+                  example: 1
+                success_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on successful checkout
+                  example: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}"
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on cancelled checkout
+                  example: "https://yourapp.com/cancel"
+      responses:
+        "200":
+          description: Item checkout session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_session_id:
+                    type: string
+                    description: Stripe checkout session ID
+                    example: "cs_test_1234567890"
+                  checkout_url:
+                    type: string
+                    format: uri
+                    description: URL to complete the checkout
+                    example: "https://checkout.stripe.com/pay/cs_test_1234567890"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/checkout/cart:
+    post:
+      summary: Create cart checkout session
+      description: |
+        Creates a Stripe Checkout Session for multiple items in a cart.
+        Perfect for e-commerce applications with shopping carts.
+        Supports up to 20 items per cart.
+      tags:
+        - Billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - email
+                - items
+                - success_url
+                - cancel_url
+              properties:
+                user_id:
+                  type: string
+                  description: Your internal user identifier
+                  example: "user_123"
+                email:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: "user@example.com"
+                items:
+                  type: array
+                  maxItems: 20
+                  description: Cart items to purchase
+                  items:
+                    type: object
+                    required:
+                      - price_id
+                      - quantity
+                    properties:
+                      price_id:
+                        type: string
+                        description: Stripe Price ID
+                        example: "price_1234567890"
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        description: Quantity for this item
+                        example: 2
+                      product_id:
+                        type: string
+                        description: Internal product identifier (optional)
+                        example: "premium_course"
+                success_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on successful checkout
+                  example: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}"
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: URL to redirect on cancelled checkout
+                  example: "https://yourapp.com/cancel"
+      responses:
+        "200":
+          description: Cart checkout session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkout_session_id:
+                    type: string
+                    description: Stripe checkout session ID
+                    example: "cs_test_1234567890"
+                  checkout_url:
+                    type: string
+                    format: uri
+                    description: URL to complete the checkout
+                    example: "https://checkout.stripe.com/pay/cs_test_1234567890"
+                  item_count:
+                    type: integer
+                    description: Number of items in the cart
+                    example: 3
         "400":
           $ref: "#/components/responses/BadRequest"
         "500":
