@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,8 @@ import (
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 	"github.com/stripe/stripe-go/v72/customer"
+	"github.com/stripe/stripe-go/v72/product"
+	"github.com/stripe/stripe-go/v72/price"
 	"github.com/stripe/stripe-go/v72/sub"
 )
 
@@ -176,44 +179,25 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, 
 }
 
 func writeValidationError(w http.ResponseWriter, field, message, requestID, environment string) {
-	writeErrorResponse(w, http.StatusBadRequest, "validation_error", "VALIDATION_FAILED", 
+	writeErrorResponse(w, http.StatusBadRequest, "validation_error", "VALIDATION_FAILED",
 		"Request validation failed", message, field, requestID, environment)
 }
 
 func writeAuthenticationError(w http.ResponseWriter, message, requestID, environment string) {
-	writeErrorResponse(w, http.StatusUnauthorized, "authentication_error", "AUTHENTICATION_REQUIRED", 
+	writeErrorResponse(w, http.StatusUnauthorized, "authentication_error", "AUTHENTICATION_REQUIRED",
 		message, "Valid API key required", "", requestID, environment)
 }
 
 func writeNotFoundError(w http.ResponseWriter, message, requestID, environment string) {
-	writeErrorResponse(w, http.StatusNotFound, "not_found", "RESOURCE_NOT_FOUND", 
+	writeErrorResponse(w, http.StatusNotFound, "not_found", "RESOURCE_NOT_FOUND",
 		message, "The requested resource was not found", "", requestID, environment)
 }
 
 func writeRateLimitError(w http.ResponseWriter, requestID, environment string) {
 	w.Header().Set("Retry-After", "60")
-	writeErrorResponse(w, http.StatusTooManyRequests, "rate_limit_error", "RATE_LIMIT_EXCEEDED", 
+	writeErrorResponse(w, http.StatusTooManyRequests, "rate_limit_error", "RATE_LIMIT_EXCEEDED",
 		"Too many requests", "Please try again later", "", requestID, environment)
 }
-package server
-
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"strings"
-	"time"
-
-	"styx/internal/database"
-
-	"github.com/stripe/stripe-go/v72"
-	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
-	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
-	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/sub"
-)
 
 // HTTPServer provides HTTP REST API for billing operations
 type HTTPServer struct {
