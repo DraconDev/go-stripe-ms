@@ -670,53 +670,44 @@ func (s *HTTPServer) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// List products from Stripe
-	params := &stripe.ProductListParams{
-		Limit: stripe.Int64(limit),
-	}
+	params := &stripe.ProductListParams{}
+	params.Limit = int64(limit)
 
 	if active != "" {
 		activeBool := active == "true"
 		params.Active = stripe.Bool(activeBool)
 	}
 
-	products, err := product.List(params)
-	if err != nil {
-		log.Printf("Failed to list Stripe products: %v", err)
+	iterator := product.List(params)
+	productList := make([]map[string]interface{}, 0)
+	
+	for iterator.Next() {
+		product := iterator.Product()
+		productData := map[string]interface{}{
+			"id":          product.ID,
+			"name":        product.Name,
+			"description": product.Description,
+			"active":      product.Active,
+			"created":     product.Created,
+			"updated":     product.Updated,
+		}
+		productList = append(productList, productData)
+	}
+
+	if iterator.Err() != nil {
+		log.Printf("Failed to list Stripe products: %v", iterator.Err())
 		http.Error(w, "Failed to list products", http.StatusInternalServerError)
 		return
 	}
 
-	type ProductListItem struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Active      bool   `json:"active"`
-		Created     int64  `json:"created"`
-		Updated     int64  `json:"updated"`
-	}
-
-	productList := make([]ProductListItem, 0, len(products.Data))
-	for _, product := range products.Data {
-		productList = append(productList, ProductListItem{
-			ID:          product.ID,
-			Name:        product.Name,
-			Description: product.Description,
-			Active:      product.Active,
-			Created:     product.Created,
-			Updated:     product.Updated,
-		})
-	}
-
 	response := struct {
-		Data       []ProductListItem `json:"data"`
-		HasMore    bool              `json:"has_more"`
-		Object     string            `json:"object"`
-		TotalCount int64             `json:"total_count"`
+		Data    []map[string]interface{} `json:"data"`
+		Object  string                   `json:"object"`
+		HasMore bool                     `json:"has_more"`
 	}{
-		Data:       productList,
-		HasMore:    products.HasMore,
-		Object:     "list",
-		TotalCount: products.TotalCount,
+		Data:    productList,
+		Object:  "list",
+		HasMore: false, // Stripe iterator doesn't expose has_more directly
 	}
 
 	w.Header().Set("Content-Type", "application/json")
