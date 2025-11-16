@@ -5,18 +5,19 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
 // HTTPServer provides HTTP REST API for billing operations
 type HTTPServer struct {
-	db           interface{}
+	db           database.RepositoryInterface
 	stripeSecret string
 }
 
 // NewHTTPServer creates a new HTTP server instance
-func NewHTTPServer(db interface{}, stripeSecret string) *HTTPServer {
+func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPServer {
 	stripe.Key = stripeSecret
 
 	return &HTTPServer{
@@ -51,33 +52,28 @@ func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request
 
 	log.Printf("CreateCustomerPortal called for user: %s", req.UserID)
 
-	// Get user's Stripe customer ID from database
-	db := s.db.(interface{ GetCustomerByUserID(context interface{}, userID string) (interface{}, error) })
-	customer, err := db.GetCustomerByUserID(r.Context(), req.UserID)
+	// Get user's Stripe customer ID
+	customer, err := s.db.GetCustomerByUserID(r.Context(), req.UserID)
 	if err != nil {
 		log.Printf("Failed to get customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Customer not found", http.StatusNotFound)
 		return
 	}
 
-	customerStruct := customer.(struct {
-		StripeCustomerID string
-	})
-
-	if customerStruct.StripeCustomerID == "" {
+	if customer.StripeCustomerID == "" {
 		http.Error(w, "Customer has no Stripe customer ID", http.StatusBadRequest)
 		return
 	}
 
 	// Create real Stripe Billing Portal session
 	portalParams := &stripe.BillingPortalSessionParams{
-		Customer:  stripe.String(customerStruct.StripeCustomerID),
+		Customer:  stripe.String(customer.StripeCustomerID),
 		ReturnURL: stripe.String(req.ReturnURL),
 	}
 
 	portalSession, err := billingportalsession.New(portalParams)
 	if err != nil {
-		log.Printf("Failed to create Stripe portal session for customer %s: %v", customerStruct.StripeCustomerID, err)
+		log.Printf("Failed to create Stripe portal session for customer %s: %v", customer.StripeCustomerID, err)
 		http.Error(w, "Failed to create portal session", http.StatusInternalServerError)
 		return
 	}
