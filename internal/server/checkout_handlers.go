@@ -10,6 +10,22 @@ import (
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
 
+// CartItem represents an individual item in a cart
+type CartItem struct {
+	PriceID   string `json:"price_id"`
+	Quantity  int64  `json:"quantity"`
+	ProductID string `json:"product_id,omitempty"`
+}
+
+// CartCheckoutRequest represents the request structure for cart checkout
+type CartCheckoutRequest struct {
+	UserID     string     `json:"user_id"`
+	Email      string     `json:"email"`
+	Items      []CartItem `json:"items"`
+	SuccessURL string     `json:"success_url"`
+	CancelURL  string     `json:"cancel_url"`
+}
+
 // CreateCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
 func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -17,18 +33,7 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req struct {
-		UserID string `json:"user_id"`
-		Email  string `json:"email"`
-		Items  []struct {
-			PriceID   string `json:"price_id"`
-			Quantity  int64  `json:"quantity"`
-			ProductID string `json:"product_id,omitempty"`
-		} `json:"items"`
-		SuccessURL string `json:"success_url"`
-		CancelURL  string `json:"cancel_url"`
-	}
-
+	var req CartCheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding cart request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -66,17 +71,7 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 }
 
 // validateCartCheckoutRequest validates the cart checkout request
-func (s *HTTPServer) validateCartCheckoutRequest(req struct {
-	UserID string
-	Email  string
-	Items  []struct {
-		PriceID   string
-		Quantity  int64
-		ProductID string
-	}
-	SuccessURL string
-	CancelURL  string
-}) error {
+func (s *HTTPServer) validateCartCheckoutRequest(req CartCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || len(req.Items) == 0 ||
 		req.SuccessURL == "" || req.CancelURL == "" {
 		return fmt.Errorf("missing required fields")
@@ -98,17 +93,7 @@ func (s *HTTPServer) validateCartCheckoutRequest(req struct {
 }
 
 // createCartCheckoutSession creates a Stripe checkout session for multiple items
-func (s *HTTPServer) createCartCheckoutSession(req struct {
-	UserID string
-	Email  string
-	Items  []struct {
-		PriceID   string
-		Quantity  int64
-		ProductID string
-	}
-	SuccessURL string
-	CancelURL  string
-}, stripeCustomerID string) (*stripe.CheckoutSession, error) {
+func (s *HTTPServer) createCartCheckoutSession(req CartCheckoutRequest, stripeCustomerID string) (*stripe.CheckoutSession, error) {
 	// Create line items from cart
 	lineItems := make([]*stripe.CheckoutSessionLineItemParams, len(req.Items))
 	for i, item := range req.Items {
