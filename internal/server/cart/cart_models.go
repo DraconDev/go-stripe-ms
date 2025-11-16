@@ -1,4 +1,4 @@
-package cart
+package server
 
 // CartCheckoutRequest represents the request structure for cart checkout
 type CartCheckoutRequest struct {

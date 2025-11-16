@@ -1,4 +1,4 @@
-package core
+package server
 
 // checkout_handlers.go has been refactored into focused files:
 // - cart_checkout.go: Cart checkout handler (main functionality)
