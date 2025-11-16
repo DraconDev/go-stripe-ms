@@ -6,10 +6,27 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	"github.com/stripe/stripe-go/v72/sub"
 )
+
+// HTTPServer provides HTTP REST API for billing operations
+type HTTPServer struct {
+	db           database.RepositoryInterface
+	stripeSecret string
+}
+
+// NewHTTPServer creates a new HTTP server instance
+func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPServer {
+	stripe.Key = stripeSecret
+
+	return &HTTPServer{
+		db:           db,
+		stripeSecret: stripeSecret,
+	}
+}
 
 // GetSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
 func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Request) {
