@@ -1,11 +1,14 @@
 package server
 
-	"fmt"
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/stripe/stripe-go/v72"
+	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
 
 // CreateSubscriptionCheckout handles POST /api/v1/checkout/subscription
@@ -90,7 +93,6 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for subscription checkout: %v", err)
-		// Fallback to a generic error if encoding fails
 		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
@@ -185,45 +187,11 @@ func (s *HTTPServer) CreateItemCheckout(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for item checkout: %v", err)
-		// Fallback to a generic error if encoding fails
 		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
 	}
 }
-
-// HealthCheck handles GET /health
-func (s *HTTPServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	response := struct {
-		Status    string    `json:"status"`
-		Timestamp time.Time `json:"timestamp"`
-		Service   string    `json:"service"`
-	}{
-		Status:    "healthy",
-		Timestamp: time.Now(),
-		Service:   "billing-service",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Error encoding response for health check: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
-			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
-		return
-	}
-}
-
-// RootHandler handles GET / - main health check endpoint
-func (s *HTTPServer) RootHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 // CreateCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
 func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) {
@@ -332,6 +300,40 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 }
+
+// HealthCheck handles GET /health
+func (s *HTTPServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	response := struct {
+		Status    string    `json:"status"`
+		Timestamp time.Time `json:"timestamp"`
+		Service   string    `json:"service"`
+	}{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+		Service:   "billing-service",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response for health check: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
+		return
+	}
+}
+
+// RootHandler handles GET / - main health check endpoint
+func (s *HTTPServer) RootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	response := struct {
 		Status    string    `json:"status"`
 		Timestamp time.Time `json:"timestamp"`
