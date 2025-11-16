@@ -21,3 +21,5 @@ func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPSe
 		stripeSecret: stripeSecret,
 	}
 }
+
+HTTPServer := &HTTPServer{}
