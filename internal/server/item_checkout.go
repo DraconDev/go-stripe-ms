@@ -10,6 +10,17 @@ import (
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
 
+// ItemCheckoutRequest represents the request structure for single item checkout
+type ItemCheckoutRequest struct {
+	UserID     string `json:"user_id"`
+	Email      string `json:"email"`
+	ProductID  string `json:"product_id"`
+	PriceID    string `json:"price_id"`
+	SuccessURL string `json:"success_url"`
+	CancelURL  string `json:"cancel_url"`
+	Quantity   int64  `json:"quantity,omitempty"`
+}
+
 // CreateItemCheckout handles POST /api/v1/checkout/item for one-time purchases
 func (s *HTTPServer) CreateItemCheckout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -17,16 +28,7 @@ func (s *HTTPServer) CreateItemCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req struct {
-		UserID     string `json:"user_id"`
-		Email      string `json:"email"`
-		ProductID  string `json:"product_id"`
-		PriceID    string `json:"price_id"`
-		SuccessURL string `json:"success_url"`
-		CancelURL  string `json:"cancel_url"`
-		Quantity   int64  `json:"quantity,omitempty"`
-	}
-
+	var req ItemCheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding item request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -69,15 +71,7 @@ func (s *HTTPServer) CreateItemCheckout(w http.ResponseWriter, r *http.Request) 
 }
 
 // validateItemCheckoutRequest validates the item checkout request
-func (s *HTTPServer) validateItemCheckoutRequest(req struct {
-	UserID     string
-	Email      string
-	ProductID  string
-	PriceID    string
-	SuccessURL string
-	CancelURL  string
-	Quantity   int64
-}) error {
+func (s *HTTPServer) validateItemCheckoutRequest(req ItemCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || req.ProductID == "" ||
 		req.PriceID == "" || req.SuccessURL == "" || req.CancelURL == "" {
 		return fmt.Errorf("missing required fields")
@@ -86,15 +80,7 @@ func (s *HTTPServer) validateItemCheckoutRequest(req struct {
 }
 
 // createItemCheckoutSession creates a Stripe checkout session for a single item
-func (s *HTTPServer) createItemCheckoutSession(req struct {
-	UserID     string
-	Email      string
-	ProductID  string
-	PriceID    string
-	SuccessURL string
-	CancelURL  string
-	Quantity   int64
-}, stripeCustomerID string) (*stripe.CheckoutSession, error) {
+func (s *HTTPServer) createItemCheckoutSession(req ItemCheckoutRequest, stripeCustomerID string) (*stripe.CheckoutSession, error) {
 	checkoutParams := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(stripeCustomerID),
 		Mode:     stripe.String(string(stripe.CheckoutSessionModePayment)),
