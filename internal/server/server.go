@@ -1,4 +1,4 @@
-// server.go - Main package file for the reorganized server module
+// server.go - Main package file for the server module
 package server
 
 import (
@@ -6,11 +6,15 @@ import (
 )
 
 // HTTPServer provides HTTP REST API for billing operations
-// This type is defined in the billing package but exported here for convenience
-type HTTPServer = BillingHTTPServer
+type HTTPServer struct {
+	db           database.RepositoryInterface
+	stripeSecret string
+}
 
 // NewHTTPServer creates a new HTTP server instance
-// This function is defined in the billing package but exported here
 func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPServer {
-	return NewBillingHTTPServer(db, stripeSecret)
+	return &HTTPServer{
+		db:           db,
+		stripeSecret: stripeSecret,
+	}
 }
