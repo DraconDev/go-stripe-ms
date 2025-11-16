@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
 )
