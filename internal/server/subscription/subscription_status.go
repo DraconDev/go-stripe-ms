@@ -1,4 +1,4 @@
-package subscription
+package server
 
 import (
 	"encoding/json"
@@ -8,8 +8,6 @@ import (
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
-		"github.com/DraconDev/go-stripe-ms/internal"
-
 )
 
 // GetSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
