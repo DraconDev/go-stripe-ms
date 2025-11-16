@@ -1,4 +1,4 @@
-package subscription
+package server
 
 import (
 	"encoding/json"
