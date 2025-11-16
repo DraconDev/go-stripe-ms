@@ -1,9 +1,5 @@
 package testutil
 
-import (
-	"testing"
-)
-
 // test_helpers.go has been refactored into focused files:
 // - http_testing.go: HTTP request/response testing utilities
 // - assertions.go: Test assertion functions
