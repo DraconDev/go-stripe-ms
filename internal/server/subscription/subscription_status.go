@@ -8,6 +8,8 @@ import (
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
+		"github.com/DraconDev/go-stripe-ms/internal/database"
+
 )
 
 // GetSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
