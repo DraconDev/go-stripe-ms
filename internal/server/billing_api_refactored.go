@@ -1,13 +1,11 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 	"github.com/stripe/stripe-go/v72/sub"
@@ -39,7 +37,7 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 	log.Printf("GetSubscriptionStatus called for user: %s, product: %s", userID, productID)
 
 	// Check database for existing subscription using correct method
-	stripeSubID, customerID, status, currentPeriodEnd, exists, err := s.db.GetSubscriptionStatus(r.Context(), userID, productID)
+	stripeSubID, status, currentPeriodEnd, exists, err := s.db.GetSubscriptionStatus(r.Context(), userID, productID)
 	if err != nil {
 		log.Printf("Failed to get subscription status for user %s, product %s: %v", userID, productID, err)
 		writeErrorResponse(w, http.StatusInternalServerError, "database_error", "DATABASE_QUERY_FAILED",
@@ -87,7 +85,7 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 		}{
 			SubscriptionID:   stripeSubID,
 			Status:           status,
-			CustomerID:       customerID,
+			CustomerID:       "", // We don't have customerID from the current method
 			CurrentPeriodEnd: currentPeriodEnd,
 			Exists:           true,
 		}
