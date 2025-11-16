@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	
+	billing "github.com/DraconDev/go-stripe-ms/internal/server/billing"
+	utils "github.com/DraconDev/go-stripe-ms/internal/server/utils"
 )
 
 // CreateCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
-func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) {
+func (s *billing.HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
