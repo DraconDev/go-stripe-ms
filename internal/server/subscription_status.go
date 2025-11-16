@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
 )
@@ -67,17 +66,17 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 // writeSubscriptionNotFoundResponse writes a response when no subscription is found
 func (s *HTTPServer) writeSubscriptionNotFoundResponse(w http.ResponseWriter, userID, productID string) {
 	response := struct {
-		Exists     bool      `json:"exists"`
-		Status     string    `json:"status"`
-		Message    string    `json:"message"`
-		UserID     string    `json:"user_id"`
-		ProductID  string    `json:"product_id"`
+		Exists    bool   `json:"exists"`
+		Status    string `json:"status"`
+		Message   string `json:"message"`
+		UserID    string `json:"user_id"`
+		ProductID string `json:"product_id"`
 	}{
-		Exists:     false,
-		Status:     "not_found",
-		Message:    "No active subscription found",
-		UserID:     userID,
-		ProductID:  productID,
+		Exists:    false,
+		Status:    "not_found",
+		Message:   "No active subscription found",
+		UserID:    userID,
+		ProductID: productID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -134,37 +133,4 @@ func (s *HTTPServer) writeSubscriptionStripeResponse(w http.ResponseWriter, stri
 		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 	}
-}
-
-// splitURLPath splits a URL path by "/" and returns the parts
-func splitURLPath(path string) []string {
-	if path == "" {
-		return []string{}
-	}
-	
-	// Remove leading slash if present
-	if path[0] == '/' {
-		path = path[1:]
-	}
-	
-	// Split by "/"
-	parts := make([]string, 0)
-	current := ""
-	for _, char := range path {
-		if char == '/' {
-			if current != "" {
-				parts = append(parts, current)
-				current = ""
-			}
-		} else {
-			current += string(char)
-		}
-	}
-	
-	// Add the last part if it exists
-	if current != "" {
-		parts = append(parts, current)
-	}
-	
-	return parts
 }
