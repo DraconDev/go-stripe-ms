@@ -1,4 +1,4 @@
-package server
+package subscription
 
 import (
 	"encoding/json"
@@ -66,17 +66,17 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 // writeSubscriptionNotFoundResponse writes a response when no subscription is found
 func (s *HTTPServer) writeSubscriptionNotFoundResponse(w http.ResponseWriter, userID, productID string) {
 	response := struct {
-		Exists     bool      `json:"exists"`
-		Status     string    `json:"status"`
-		Message    string    `json:"message"`
-		UserID     string    `json:"user_id"`
-		ProductID  string    `json:"product_id"`
+		Exists    bool   `json:"exists"`
+		Status    string `json:"status"`
+		Message   string `json:"message"`
+		UserID    string `json:"user_id"`
+		ProductID string `json:"product_id"`
 	}{
-		Exists:     false,
-		Status:     "not_found",
-		Message:    "No active subscription found",
-		UserID:     userID,
-		ProductID:  productID,
+		Exists:    false,
+		Status:    "not_found",
+		Message:   "No active subscription found",
+		UserID:    userID,
+		ProductID: productID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
