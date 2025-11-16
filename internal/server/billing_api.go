@@ -10,22 +10,6 @@ import (
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
-// HTTPServer provides HTTP REST API for billing operations
-type HTTPServer struct {
-	db           database.RepositoryInterface
-	stripeSecret string
-}
-
-// NewHTTPServer creates a new HTTP server instance
-func NewHTTPServer(db database.RepositoryInterface, stripeSecret string) *HTTPServer {
-	stripe.Key = stripeSecret
-
-	return &HTTPServer{
-		db:           db,
-		stripeSecret: stripeSecret,
-	}
-}
-
 // CreateCustomerPortal handles POST /api/v1/portal
 func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
