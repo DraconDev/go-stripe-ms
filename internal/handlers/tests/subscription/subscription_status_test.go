@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers"
 )
 
 // TestGetSubscriptionStatusIntegration tests subscription status retrieval with real database
@@ -18,7 +19,7 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 		}
 
 		// Create HTTP server with real database
-		server := NewHTTPServer(testDB.Repo, "sk_test_123")
+		server := handlers.NewHTTPServer(testDB.Repo, "sk_test_123")
 
 		tests := []struct {
 			name               string
@@ -59,7 +60,7 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 
 				// Assert
 				if w.Code != tt.expectedStatusCode {
-					t.Errorf("Expected status code %d, got %d", 
+					t.Errorf("Expected status code %d, got %d",
 						tt.expectedStatusCode, w.Code)
 				}
 
@@ -68,7 +69,7 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 					if err := json.Unmarshal(w.Body.Bytes(), &errorResponse); err != nil {
 						t.Errorf("Failed to unmarshal error response: %v", err)
 					} else if errorResponse["error"] != tt.expectedError {
-						t.Errorf("Expected error '%s', got '%s'", 
+						t.Errorf("Expected error '%s', got '%s'",
 							tt.expectedError, errorResponse["error"])
 					}
 				}
@@ -80,7 +81,7 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 					} else {
 						for key, expectedValue := range tt.expectedResponse {
 							if actualValue, exists := response[key]; !exists || actualValue != expectedValue {
-								t.Errorf("Expected response[%s] = %v, got %v", 
+								t.Errorf("Expected response[%s] = %v, got %v",
 									key, expectedValue, actualValue)
 							}
 						}
@@ -89,7 +90,7 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 
 				// Check Content-Type header
 				if w.Header().Get("Content-Type") != "application/json" {
-					t.Errorf("Expected Content-Type 'application/json', got '%s'", 
+					t.Errorf("Expected Content-Type 'application/json', got '%s'",
 						w.Header().Get("Content-Type"))
 				}
 			})
