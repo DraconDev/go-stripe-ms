@@ -2,10 +2,8 @@ package database
 
 import (
 	"context"
-	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -94,23 +92,7 @@ func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, stripeSubID, 
 	return err
 }
 
-// GetCustomerByStripeID retrieves customer by Stripe customer ID
-func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error) {
-	return ScanCustomer(r.db.QueryRow(ctx, `
-		SELECT id, user_id, email, stripe_customer_id, created_at, updated_at
-		FROM customers 
-		WHERE stripe_customer_id = $1
-	`, stripeCustomerID))
-}
 
-// GetCustomerByUserID retrieves customer by user ID
-func (r *Repository) GetCustomerByUserID(ctx context.Context, userID string) (*Customer, error) {
-	return ScanCustomer(r.db.QueryRow(ctx, `
-		SELECT id, user_id, email, stripe_customer_id, created_at, updated_at
-		FROM customers 
-		WHERE user_id = $1
-	`, userID))
-}
 
 // GetSubscriptionByStripeID retrieves subscription by Stripe subscription ID
 func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error) {
