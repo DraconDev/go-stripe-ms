@@ -1,5 +1,17 @@
 # Master Payment Microservice Architecture Strategy
 
+## Table of Contents
+- [Executive Summary](#executive-summary)
+- [Strategic Vision](#strategic-vision)
+- [Architecture Overview](#architecture-overview)
+- [Universal API Design](#universal-api-design)
+- [Project Configuration System](#project-configuration-system)
+- [Event-Driven Integration](#event-driven-service-integration)
+- [Project Integration Patterns](#project-integration-patterns)
+- [Implementation Roadmap](#implementation-roadmap)
+
+---
+
 ## Executive Summary
 
 This master strategy outlines a **comprehensive payment ecosystem** designed for maximum reusability across all your projects. It combines proven payment processing with event-driven integration to create a universal platform that serves 100+ projects with minimal overhead.

@@ -12,7 +12,7 @@
 
 ### 1. curl (Direct HTTP Testing)
 
-Since your server is running on port 8080:
+Since your server is running on port 9000:
 
 ```bash
 # Basic test
