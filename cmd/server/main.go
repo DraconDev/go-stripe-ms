@@ -13,7 +13,7 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/DraconDev/go-stripe-ms/internal/database"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers"
+	handlerSvc "github.com/DraconDev/go-stripe-ms/internal/handlers"
 	"github.com/DraconDev/go-stripe-ms/internal/webhooks"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
