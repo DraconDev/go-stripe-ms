@@ -1,5 +1,21 @@
 # Stripe Payment Microservice - Comprehensive Analysis
 
+## Table of Contents
+- [Executive Summary](#executive-summary)
+- [Architecture Overview](#architecture-overview)
+- [Core Capabilities](#core-capabilities)
+- [Testing Excellence](#testing-excellence)
+- [Production Features](#production-features)
+- [Reusability Assessment](#reusability-assessment)
+- [Deployment Options](#deployment-options)
+- [Integration Examples](#integration-examples)
+- [Enhancement Opportunities](#enhancement-opportunities)
+- [Quick Start for Reuse](#quick-start-for-reuse)
+- [Recommendations](#recommendations)
+- [Technical Debt Assessment](#technical-debt-assessment)
+
+---
+
 ## Executive Summary
 
 This Stripe payment microservice is a **production-ready, HTTP-only billing service** built with universal compatibility in mind. It's exceptionally well-architected with clean separation of concerns, comprehensive testing, and excellent reusability potential.
