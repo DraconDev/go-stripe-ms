@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 )
 
-// HealthCheck handles GET /health
-func (s *HTTPServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
+// HandleHealth handles GET /health - simple health check
+func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -27,14 +29,14 @@ func (s *HTTPServer) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for health check: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
 	}
 }
 
-// RootHandler handles GET / - main health check endpoint
-func (s *HTTPServer) RootHandler(w http.ResponseWriter, r *http.Request) {
+// HandleRoot handles GET / - main health check endpoint with service information
+func HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -69,7 +71,7 @@ func (s *HTTPServer) RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for root handler: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
 	}
