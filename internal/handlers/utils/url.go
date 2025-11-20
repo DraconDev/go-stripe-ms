@@ -1,7 +1,7 @@
 package utils
 
-// splitURLPath splits a URL path by "/" and returns the parts
-func splitURLPath(path string) []string {
+// SplitURLPath splits a URL path by "/" and returns the parts
+func SplitURLPath(path string) []string {
 	if path == "" {
 		return []string{}
 	}

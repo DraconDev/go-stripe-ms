@@ -38,7 +38,8 @@ type ErrorMeta struct {
 	Environment string    `json:"environment,omitempty"`
 }
 
-func writeErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, message, description, field, requestID, environment string) {
+// WriteErrorResponse writes a standardized JSON error response
+func WriteErrorResponse(w http.ResponseWriter, statusCode int, errorType, code, message, description, field, requestID, environment string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
