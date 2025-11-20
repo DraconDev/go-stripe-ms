@@ -1,4 +1,4 @@
-package handlers
+package utils
 
 // splitURLPath splits a URL path by "/" and returns the parts
 func splitURLPath(path string) []string {
