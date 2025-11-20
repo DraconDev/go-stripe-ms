@@ -1,5 +1,8 @@
 # Master Payment Microservice Architecture Strategy
 
+**Document Type**: Strategic Architecture Blueprint  
+**Purpose**: Define the comprehensive strategy for universal payment platform serving 100+ projects
+
 ## Table of Contents
 - [Executive Summary](#executive-summary)
 - [Strategic Vision](#strategic-vision)
