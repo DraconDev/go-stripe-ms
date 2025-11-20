@@ -1,7 +1,9 @@
 # Testing Your Item Endpoint
 
 ## Quick Answer: Customer ID
+
 **You don't need to provide a customer ID!** The system automatically:
+
 1. Checks your database for existing customer by `user_id`
 2. Creates a new Stripe customer if none exists
 3. Saves the Stripe customer ID back to your database
@@ -14,7 +16,7 @@ Since your server is running on port 8080:
 
 ```bash
 # Basic test
-curl -X POST http://localhost:8080/api/v1/checkout/item \
+curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user_123",
@@ -27,7 +29,7 @@ curl -X POST http://localhost:8080/api/v1/checkout/item \
   }'
 
 # With quantity
-curl -X POST http://localhost:8080/api/v1/checkout/item \
+curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user_456",
@@ -50,6 +52,7 @@ go test -v -run "TestCreateItemCheckout" ./internal/server/
 ### 3. Postman/Insomnia
 
 Create a POST request to:
+
 - URL: `http://localhost:9000/api/v1/checkout/item`
 - Headers: `Content-Type: application/json`
 - Body: JSON as shown above
@@ -57,40 +60,41 @@ Create a POST request to:
 ### 4. JavaScript Fetch
 
 ```javascript
-fetch('http://localhost:9000/api/v1/checkout/item', {
-  method: 'POST',
+fetch("http://localhost:9000/api/v1/checkout/item", {
+  method: "POST",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    user_id: 'user_js_123',
-    email: 'javascript@example.com',
-    product_id: 'digital_product',
-    price_id: 'price_1234567890',
+    user_id: "user_js_123",
+    email: "javascript@example.com",
+    product_id: "digital_product",
+    price_id: "price_1234567890",
     quantity: 2,
-    success_url: 'https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}',
-    cancel_url: 'https://yourapp.com/cancel'
-  })
+    success_url: "https://yourapp.com/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: "https://yourapp.com/cancel",
+  }),
 })
-.then(response => response.json())
-.then(data => console.log('Checkout URL:', data.checkout_url));
+  .then((response) => response.json())
+  .then((data) => console.log("Checkout URL:", data.checkout_url));
 ```
 
 ## Required Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `user_id` | string | ✅ | Your internal user identifier |
-| `email` | string | ✅ | User's email address |
-| `product_id` | string | ✅ | Your internal product identifier |
-| `price_id` | string | ✅ | Stripe Price ID (e.g., price_123...) |
-| `success_url` | string | ✅ | Redirect URL on success |
-| `cancel_url` | string | ✅ | Redirect URL on cancellation |
-| `quantity` | integer | ❌ | Default: 1 |
+| Field         | Type    | Required | Description                          |
+| ------------- | ------- | -------- | ------------------------------------ |
+| `user_id`     | string  | ✅       | Your internal user identifier        |
+| `email`       | string  | ✅       | User's email address                 |
+| `product_id`  | string  | ✅       | Your internal product identifier     |
+| `price_id`    | string  | ✅       | Stripe Price ID (e.g., price_123...) |
+| `success_url` | string  | ✅       | Redirect URL on success              |
+| `cancel_url`  | string  | ✅       | Redirect URL on cancellation         |
+| `quantity`    | integer | ❌       | Default: 1                           |
 
 ## Expected Response
 
 Success (200):
+
 ```json
 {
   "checkout_session_id": "cs_test_1234567890",
@@ -99,6 +103,7 @@ Success (200):
 ```
 
 Error (400/500):
+
 ```json
 {
   "error": {
@@ -114,6 +119,7 @@ Error (400/500):
 ## Testing Different Scenarios
 
 ### 1. First-time Customer
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
@@ -128,6 +134,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
 ```
 
 ### 2. Returning Customer
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
@@ -142,6 +149,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
 ```
 
 ### 3. Bulk Purchase
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
@@ -159,6 +167,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
 ## Error Testing
 
 ### Missing Required Fields
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
@@ -169,6 +178,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
 ```
 
 ### Invalid Email
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/checkout/item \
   -H "Content-Type: application/json" \
@@ -196,14 +206,17 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
 ### Common Issues
 
 1. **"Failed to create or find customer"**
+
    - Check Stripe API key configuration
    - Verify database connection
 
 2. **"Missing required fields"**
+
    - Ensure all required fields are provided
    - Check JSON format
 
 3. **"Invalid email format"**
+
    - Use valid email address
    - Check email field name (not `email_address`)
 
@@ -212,6 +225,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
    - Health check: `curl http://localhost:9000/health`
 
 ### Check Server Status
+
 ```bash
 curl http://localhost:9000/health
 curl http://localhost:9000/debug
