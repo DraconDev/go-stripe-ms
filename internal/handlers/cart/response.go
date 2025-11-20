@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/stripe/stripe-go/v72"
 )
 
@@ -23,7 +24,7 @@ func writeCartCheckoutResponse(w http.ResponseWriter, checkoutSession *stripe.Ch
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for cart checkout: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 	}
 }

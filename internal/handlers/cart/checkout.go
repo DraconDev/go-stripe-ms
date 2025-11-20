@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers"
 )
 
-// CreateCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
-func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) {
+// HandleCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
+func HandleCartCheckout(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -26,10 +29,10 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	log.Printf("CreateCartCheckout called for user: %s, items: %d", req.UserID, len(req.Items))
+	log.Printf("HandleCartCheckout called for user: %s, items: %d", req.UserID, len(req.Items))
 
 	// Find or create Stripe customer
-	stripeCustomerID, err := s.findOrCreateStripeCustomer(r.Context(), req.UserID, req.Email)
+	stripeCustomerID, err := handlers.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
