@@ -5,22 +5,26 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/stripe/stripe-go/v72"
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
-// CreateCustomerPortal handles POST /api/v1/portal
-func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request) {
+// CustomerPortalRequest represents the request for creating a customer portal session
+type CustomerPortalRequest struct {
+	UserID    string `json:"user_id"`
+	ReturnURL string `json:"return_url"`
+}
+
+// HandleCustomerPortal handles POST /api/v1/portal
+func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req struct {
-		UserID    string `json:"user_id"`
-		ReturnURL string `json:"return_url"`
-	}
-
+	var req CustomerPortalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -33,10 +37,10 @@ func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	log.Printf("CreateCustomerPortal called for user: %s", req.UserID)
+	log.Printf("HandleCustomerPortal called for user: %s", req.UserID)
 
 	// Get user's Stripe customer ID
-	customer, err := s.db.GetCustomerByUserID(r.Context(), req.UserID)
+	customer, err := db.GetCustomerByUserID(r.Context(), req.UserID)
 	if err != nil {
 		log.Printf("Failed to get customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Customer not found", http.StatusNotFound)
@@ -74,7 +78,7 @@ func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for customer portal: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
 	}
