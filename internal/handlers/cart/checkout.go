@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
 )
 
 // HandleCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
@@ -32,7 +32,7 @@ func HandleCartCheckout(db database.RepositoryInterface, stripeSecret string, w 
 	log.Printf("HandleCartCheckout called for user: %s, items: %d", req.UserID, len(req.Items))
 
 	// Find or create Stripe customer
-	stripeCustomerID, err := handlers.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
+	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
