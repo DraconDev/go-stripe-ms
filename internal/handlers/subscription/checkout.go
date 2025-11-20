@@ -5,26 +5,32 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/stripe/stripe-go/v72"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
 
-// CreateSubscriptionCheckout handles POST /api/v1/checkout/subscription
-func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.Request) {
+// SubscriptionCheckoutRequest represents the request for subscription checkout
+type SubscriptionCheckoutRequest struct {
+	UserID     string `json:"user_id"`
+	Email      string `json:"email"`
+	ProductID  string `json:"product_id"`
+	PriceID    string `json:"price_id"`
+	SuccessURL string `json:"success_url"`
+	CancelURL  string `json:"cancel_url"`
+}
+
+// HandleSubscriptionCheckout handles POST /api/v1/checkout/subscription
+func HandleSubscriptionCheckout(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req struct {
-		UserID     string `json:"user_id"`
-		Email      string `json:"email"`
-		ProductID  string `json:"product_id"`
-		PriceID    string `json:"price_id"`
-		SuccessURL string `json:"success_url"`
-		CancelURL  string `json:"cancel_url"`
-	}
-
+	var req SubscriptionCheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding subscription request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -38,10 +44,10 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	log.Printf("CreateSubscriptionCheckout called for user: %s, product: %s", req.UserID, req.ProductID)
+	log.Printf("HandleSubscriptionCheckout called for user: %s, product: %s", req.UserID, req.ProductID)
 
 	// Find or create Stripe customer
-	stripeCustomerID, err := s.findOrCreateStripeCustomer(r.Context(), req.UserID, req.Email)
+	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
@@ -49,7 +55,7 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	}
 
 	// Use checkout session builder
-	builder := NewCheckoutSessionBuilder(stripeCustomerID, req.UserID, req.SuccessURL, req.CancelURL, "subscription")
+	builder := core.NewCheckoutSessionBuilder(stripeCustomerID, req.UserID, req.SuccessURL, req.CancelURL, "subscription")
 	builder.AddLineItem(req.PriceID, 1)
 
 	checkoutParams := builder.Build(stripe.CheckoutSessionModeSubscription)
@@ -76,24 +82,17 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response for subscription checkout: %v", err)
-		writeErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
 		return
 	}
 }
 
 // validateSubscriptionRequest validates subscription checkout requests
-func validateSubscriptionRequest(req struct {
-	UserID     string `json:"user_id"`
-	Email      string `json:"email"`
-	ProductID  string `json:"product_id"`
-	PriceID    string `json:"price_id"`
-	SuccessURL string `json:"success_url"`
-	CancelURL  string `json:"cancel_url"`
-}) error {
+func validateSubscriptionRequest(req SubscriptionCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || req.ProductID == "" ||
 		req.PriceID == "" || req.SuccessURL == "" || req.CancelURL == "" {
-		return &ValidationError{Field: "request", Message: "user_id, email, product_id, price_id, success_url, and cancel_url are required"}
+		return &utils.ValidationError{Field: "request", Message: "user_id, email, product_id, price_id, success_url, and cancel_url are required"}
 	}
 	return nil
 }
