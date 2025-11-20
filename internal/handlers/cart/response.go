@@ -1,4 +1,4 @@
-package handlers
+package cart
 
 import (
 	"encoding/json"
