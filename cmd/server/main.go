@@ -37,7 +37,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	}
 
 	// Initialize HTTP API server
-	apiServer := handlers.NewHTTPServer(db, cfg.StripeSecretKey)
+	apiServer := handlerSvc.NewHTTPServer(db, cfg.StripeSecretKey)
 
 	// Initialize webhook handler
 	webhookHandler := webhooks.NewStripeWebhookHandler(db, cfg.StripeSecretKey, cfg.StripeWebhookSecret)
@@ -100,9 +100,9 @@ func (s *Server) StartHTTPServer() error {
 // setupAPIRoutes sets up all HTTP routes for the billing API
 func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	// Health check
-// Root endpoint
+	// Root endpoint
 	mux.HandleFunc("/", s.apiServer.RootHandler)
-	
+
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 
 	// Checkout endpoints - split by payment type
