@@ -24,7 +24,7 @@ type Server struct {
 	config         *config.Config
 	httpServer     *http.Server
 	db             *database.Repository
-	apiServer      *server.HTTPServer
+	apiServer      *handlers.HTTPServer
 	webhookHandler *webhooks.StripeWebhookHandler
 }
 
