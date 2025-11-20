@@ -37,7 +37,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	}
 
 	// Initialize HTTP API server
-	apiServer := server.NewHTTPServer(db, cfg.StripeSecretKey)
+	apiServer := handlers.NewHTTPServer(db, cfg.StripeSecretKey)
 
 	// Initialize webhook handler
 	webhookHandler := webhooks.NewStripeWebhookHandler(db, cfg.StripeSecretKey, cfg.StripeWebhookSecret)
