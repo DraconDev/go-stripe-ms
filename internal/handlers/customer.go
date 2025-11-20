@@ -2,43 +2,48 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log"
 
+	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
-	customer "github.com/stripe/stripe-go/v72/customer"
+	"github.com/stripe/stripe-go/v72/customer"
 )
 
-// findOrCreateStripeCustomer finds an existing Stripe customer or creates a new one
-func (s *HTTPServer) findOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error) {
-	// Check database for existing customer
-	existingCustomer, err := s.db.GetCustomerByUserID(ctx, userID)
-	if err == nil && existingCustomer != nil && existingCustomer.StripeCustomerID != "" {
-		log.Printf("Found existing Stripe customer for user %s: %s", userID, existingCustomer.StripeCustomerID)
-		return existingCustomer.StripeCustomerID, nil
+// FindOrCreateStripeCustomer finds an existing Stripe customer or creates a new one
+// This is a shared utility function used by multiple handlers
+func FindOrCreateStripeCustomer(ctx context.Context, db database.RepositoryInterface, userID, email string) (string, error) {
+	// Check if customer already exists in database
+	existingCustomerID, err := db.GetStripeCustomerID(ctx, userID)
+	if err != nil {
+		log.Printf("Error checking for existing customer: %v", err)
+		return "", err
+	}
+
+	// If customer exists, return their ID
+	if existingCustomerID != "" {
+		log.Printf("Found existing Stripe customer: %s for user: %s", existingCustomerID, userID)
+		return existingCustomerID, nil
 	}
 
 	// Create new Stripe customer
-	customerParams := &stripe.CustomerParams{
+	log.Printf("Creating new Stripe customer for user: %s", userID)
+	params := &stripe.CustomerParams{
 		Email: stripe.String(email),
 	}
+	params.AddMetadata("user_id", userID)
 
-	// Add metadata
-	customerParams.AddMetadata("user_id", userID)
-
-	stripeCustomer, err := customer.New(customerParams)
+	newCustomer, err := customer.New(params)
 	if err != nil {
 		log.Printf("Failed to create Stripe customer: %v", err)
-		return "", fmt.Errorf("failed to create Stripe customer: %w", err)
+		return "", err
 	}
 
-	// Update database with Stripe customer ID
-	err = s.db.UpdateCustomerStripeID(ctx, userID, stripeCustomer.ID)
-	if err != nil {
-		log.Printf("Failed to update customer Stripe ID in database: %v", err)
-		return "", fmt.Errorf("failed to update customer record: %w", err)
+	// Store customer ID in database
+	if err := db.SaveStripeCustomer(ctx, userID, newCustomer.ID); err != nil {
+		log.Printf("Failed to save customer ID to database: %v", err)
+		return "", err
 	}
 
-	log.Printf("Created new Stripe customer: %s for user: %s", stripeCustomer.ID, userID)
-	return stripeCustomer.ID, nil
+	log.Printf("Created new Stripe customer: %s", newCustomer.ID)
+	return newCustomer.ID, nil
 }
