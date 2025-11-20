@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/stripe/stripe-go/v72"
 )
 
@@ -65,7 +66,7 @@ func validateCommonCheckoutRequest(req struct {
 	CancelURL  string `json:"cancel_url"`
 }) error {
 	if req.UserID == "" || req.Email == "" || req.SuccessURL == "" || req.CancelURL == "" {
-		return &ValidationError{Field: "request", Message: "user_id, email, success_url, and cancel_url are required"}
+		return &utils.ValidationError{Field: "request", Message: "user_id, email, success_url, and cancel_url are required"}
 	}
 	return nil
 }
@@ -78,19 +79,19 @@ func validateCartRequest(req struct {
 	} `json:"items"`
 }) error {
 	if len(req.Items) == 0 {
-		return &ValidationError{Field: "items", Message: "at least one item is required"}
+		return &utils.ValidationError{Field: "items", Message: "at least one item is required"}
 	}
 
 	if len(req.Items) > 20 {
-		return &ValidationError{Field: "items", Message: "cart cannot contain more than 20 items"}
+		return &utils.ValidationError{Field: "items", Message: "cart cannot contain more than 20 items"}
 	}
 
 	for i, item := range req.Items {
 		if item.PriceID == "" {
-			return &ValidationError{Field: "items", Message: fmt.Sprintf("item %d price_id is required", i+1)}
+			return &utils.ValidationError{Field: "items", Message: fmt.Sprintf("item %d price_id is required", i+1)}
 		}
 		if item.Quantity <= 0 {
-			return &ValidationError{Field: "items", Message: fmt.Sprintf("item %d quantity must be greater than 0", i+1)}
+			return &utils.ValidationError{Field: "items", Message: fmt.Sprintf("item %d quantity must be greater than 0", i+1)}
 		}
 	}
 
