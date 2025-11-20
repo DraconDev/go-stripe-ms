@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/stripe/stripe-go/v72"
 )
 
@@ -135,6 +134,6 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(ctx context.Con
 }
 
 // getCustomerByStripeID retrieves customer from database by Stripe customer ID
-func (h *StripeWebhookHandler) getCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error) {
+func (h *StripeWebhookHandler) getCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*database.Customer, error) {
 	return h.db.GetCustomerByStripeID(ctx, stripeCustomerID)
 }
