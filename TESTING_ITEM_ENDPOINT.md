@@ -10,11 +10,11 @@
 
 ### 1. curl (Direct HTTP Testing)
 
-Since your server is running on port 9000:
+Since your server is running on port 8080:
 
 ```bash
 # Basic test
-curl -X POST http://localhost:9000/api/v1/checkout/item \
+curl -X POST http://localhost:8080/api/v1/checkout/item \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user_123",
@@ -27,7 +27,7 @@ curl -X POST http://localhost:9000/api/v1/checkout/item \
   }'
 
 # With quantity
-curl -X POST http://localhost:9000/api/v1/checkout/item \
+curl -X POST http://localhost:8080/api/v1/checkout/item \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user_456",
