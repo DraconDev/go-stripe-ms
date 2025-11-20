@@ -28,9 +28,9 @@ The individual `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` variabl
 - `internal/server/http_test.go` - Unit tests using mocks
 - These are fast but don't test actual database operations
 
-### Integration Tests (New)
-- `internal/server/http_integration_test.go` - Integration tests using real database
-- `internal/database/test_setup.go` - Database testing utilities
+### Integration Tests (New)  
+- `internal/server/tests/` - Real database integration tests organized by functionality
+- `internal/database/test_database.go` - Database testing utilities
 
 ## Running Tests
 
@@ -242,18 +242,17 @@ go test -v -run Integration ./...          # Integration tests with real DB
 ## Examples in the Codebase
 
 ### HTTP Integration Tests
-See `internal/server/http_integration_test.go` for complete examples of:
-- Testing checkout endpoints with real database
-- Testing subscription status retrieval
-- Testing customer portal creation
-- Testing database operations directly
+See `internal/server/tests/` directory for organized test examples:
+- `billing_api_test.go` - Customer portal and billing operations
+- `subscription_checkout_test.go` - Subscription checkout workflows  
+- `subscription_status_test.go` - Subscription status management
+- `database_operations_test.go` - Direct database operations
 
-### Database Integration Tests
-The integration tests demonstrate:
-- Creating and retrieving customers
-- Managing subscriptions
-- Testing database transactions
-- Error handling with real database
+### Test Organization Benefits
+- Each test file focuses on specific functionality
+- Tests use real database connections with proper cleanup
+- Both mock and integration testing patterns available
+- Clear separation between unit and integration testing
 
 ## Troubleshooting
 
