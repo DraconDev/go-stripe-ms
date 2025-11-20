@@ -1,12 +1,10 @@
-package server
+package handlers
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/DraconDev/go-stripe-ms/internal/server/core"
-	"github.com/DraconDev/go-stripe-ms/internal/server/utils"
 	"github.com/stripe/stripe-go/v72"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
@@ -53,7 +51,7 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 	// Use checkout session builder
 	builder := NewCheckoutSessionBuilder(stripeCustomerID, req.UserID, req.SuccessURL, req.CancelURL, "subscription")
 	builder.AddLineItem(req.PriceID, 1)
-	
+
 	checkoutParams := builder.Build(stripe.CheckoutSessionModeSubscription)
 	checkoutParams.AddMetadata("product_id", req.ProductID)
 

@@ -1,9 +1,10 @@
-package server
+package handlers
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
+
 	"github.com/stripe/stripe-go/v72"
 	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 )
