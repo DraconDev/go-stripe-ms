@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"fmt"
@@ -80,11 +80,11 @@ func validateCartRequest(req struct {
 	if len(req.Items) == 0 {
 		return &ValidationError{Field: "items", Message: "at least one item is required"}
 	}
-	
+
 	if len(req.Items) > 20 {
 		return &ValidationError{Field: "items", Message: "cart cannot contain more than 20 items"}
 	}
-	
+
 	for i, item := range req.Items {
 		if item.PriceID == "" {
 			return &ValidationError{Field: "items", Message: fmt.Sprintf("item %d price_id is required", i+1)}
@@ -93,6 +93,6 @@ func validateCartRequest(req struct {
 			return &ValidationError{Field: "items", Message: fmt.Sprintf("item %d quantity must be greater than 0", i+1)}
 		}
 	}
-	
+
 	return nil
 }

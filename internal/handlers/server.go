@@ -1,5 +1,5 @@
 // server.go - Main server type definitions
-package server
+package handlers
 
 import (
 	"github.com/DraconDev/go-stripe-ms/internal/database"
