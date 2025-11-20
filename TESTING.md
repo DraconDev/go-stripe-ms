@@ -1,8 +1,11 @@
 # Real Database Testing Guide
 
-This project now supports testing with the real PostgreSQL database instead of mocks. This provides more realistic testing that catches integration issues and works with your actual database schema.
+**Document Type**: Technical Documentation - Testing  
+**Purpose**: Guide for implementing real database integration testing alongside mock testing
 
 ## Overview
+
+This project now supports testing with the real PostgreSQL database instead of mocks. This provides more realistic testing that catches integration issues and works with your actual database schema.
 
 You have two testing approaches:
 
