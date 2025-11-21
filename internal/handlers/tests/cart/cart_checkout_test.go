@@ -98,13 +98,18 @@ func TestCreateCartCheckoutIntegration(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Use the actual customer UserID from test data for valid cart requests
+				if tt.name == "Valid cart checkout request" {
+					tt.requestBody["user_id"] = customer.UserID
+				}
+
 				// Create request
 				bodyBytes, _ := json.Marshal(tt.requestBody)
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout/cart",
 					bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
 
-				// Inject project ID into context
+				// Inject project context
 				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
 				req = req.WithContext(ctx)
 

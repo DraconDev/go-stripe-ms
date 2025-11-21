@@ -100,6 +100,13 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Use the actual customer UserID from test data for valid requests
+				if tt.setupAuth {
+					if userID, ok := tt.requestBody["user_id"].(string); !ok || userID == "test_user_123" {
+						tt.requestBody["user_id"] = customer.UserID
+					}
+				}
+
 				// Create request
 				bodyBytes, _ := json.Marshal(tt.requestBody)
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout/item",
