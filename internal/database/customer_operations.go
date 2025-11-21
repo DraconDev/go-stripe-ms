@@ -59,12 +59,3 @@ func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID
 		WHERE stripe_customer_id = $1
 	`, stripeCustomerID))
 }
-
-// GetCustomerByUserID retrieves customer by user ID
-func (r *Repository) GetCustomerByUserID(ctx context.Context, userID string) (*Customer, error) {
-	return ScanCustomer(r.db.QueryRow(ctx, `
-		SELECT id, project_id, user_id, email, stripe_customer_id, created_at, updated_at
-		FROM customers 
-		WHERE user_id = $1
-	`, userID))
-}
