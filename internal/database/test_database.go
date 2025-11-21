@@ -157,7 +157,7 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 }
 
 // CreateTestData creates test customers and subscriptions
-func (td *TestDatabase) CreateTestData() (*Project, error) {
+func (td *TestDatabase) CreateTestData() (*Project, *Customer, error) {
 	// Use timestamp to ensure uniqueness across parallel test runs
 	timestamp := time.Now().UnixNano()
 
@@ -172,7 +172,7 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 		UpdatedAt: time.Now(),
 	}
 	if err := td.CreateTestProject(project); err != nil {
-		return nil, fmt.Errorf("failed to create test project: %w", err)
+		return nil, nil, fmt.Errorf("failed to create test project: %w", err)
 	}
 
 	// Create test customer
@@ -188,7 +188,7 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	}
 
 	if err := td.CreateTestCustomer(customer); err != nil {
-		return nil, fmt.Errorf("failed to create test customer: %w", err)
+		return nil, nil, fmt.Errorf("failed to create test customer: %w", err)
 	}
 
 	// Create test subscription
@@ -207,8 +207,8 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	}
 
 	if err := td.CreateTestSubscription(subscription); err != nil {
-		return nil, fmt.Errorf("failed to create test subscription: %w", err)
+		return nil, nil, fmt.Errorf("failed to create test subscription: %w", err)
 	}
 
-	return project, nil
+	return project, customer, nil
 }
