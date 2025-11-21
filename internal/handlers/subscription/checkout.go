@@ -9,15 +9,15 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/stripe/stripe-go/v72"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
 
-// SubscriptionCheckoutRequest represents the request for subscription checkout
+// SubscriptionCheckoutRequest represents the request structure for subscription checkout
 type SubscriptionCheckoutRequest struct {
 	UserID     string `json:"user_id"`
 	Email      string `json:"email"`
-	ProductID  string `json:"product_id"`
 	PriceID    string `json:"price_id"`
 	SuccessURL string `json:"success_url"`
 	CancelURL  string `json:"cancel_url"`
@@ -37,17 +37,22 @@ func HandleSubscriptionCheckout(db database.RepositoryInterface, stripeSecret st
 		return
 	}
 
-	// Validate using common validation
-	if err := validateSubscriptionRequest(req); err != nil {
-		log.Printf("Validation error for subscription request: %v", err)
+	// Validate required fields
+	if err := validateSubscriptionCheckoutRequest(req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("HandleSubscriptionCheckout called for user: %s, product: %s", req.UserID, req.ProductID)
+	projectID, ok := middleware.GetProjectID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	log.Printf("HandleSubscriptionCheckout called for user: %s, price: %s", req.UserID, req.PriceID)
 
 	// Find or create Stripe customer
-	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
+	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, projectID, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
