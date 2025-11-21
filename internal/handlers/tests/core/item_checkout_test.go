@@ -110,8 +110,8 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 
 				// Assert
 				if w.Code != tt.expectedStatusCode {
-					t.Errorf("Expected status code %d, got %d",
-						tt.expectedStatusCode, w.Code)
+					t.Errorf("Expected status code %d, got %d. Response: %s",
+						tt.expectedStatusCode, w.Code, w.Body.String())
 				}
 
 				if tt.expectedError != "" {
