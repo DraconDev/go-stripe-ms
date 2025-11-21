@@ -117,8 +117,14 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 				t.Fatalf("Failed to update customer Stripe ID: %v", err)
 			}
 
+			// Get customer to obtain UUID
+			customer3, err := testDB.Repo.GetCustomerByUserID(ctx, projectID, testUserID3)
+			if err != nil {
+				t.Fatalf("Failed to get customer: %v", err)
+			}
+
 			now := time.Now()
-			err = testDB.Repo.CreateSubscription(ctx, projectID, stripeCustomerID2, stripeSubID,
+			err = testDB.Repo.CreateSubscription(ctx, projectID, customer3.ID.String(), stripeSubID,
 				"enterprise_plan", "price_999", testUserID3, "active", now, now.AddDate(0, 0, 30))
 			if err != nil {
 				t.Fatalf("Failed to create subscription: %v", err)

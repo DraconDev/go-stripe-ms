@@ -67,6 +67,7 @@ func TestAPIKeyAuth_Middleware(t *testing.T) {
 					if !ok {
 						t.Error("Project ID not found in context")
 					}
+					// Check it matches the test project
 					if projectID != project.ID {
 						t.Errorf("Expected project ID %v, got %v", project.ID, projectID)
 					}
