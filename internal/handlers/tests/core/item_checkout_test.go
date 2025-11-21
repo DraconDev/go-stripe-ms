@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
@@ -24,8 +25,9 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 		_ = customer // Will be used in future tests
 
 		// Create HTTP server with real database
-		// Using a test stripe key
-		server := handlers.NewHTTPServer(testDB.Repo, "sk_test_123")
+		// Using the actual Stripe test key from environment
+		stripeKey := os.Getenv("STRIPE_SECRET_KEY")
+		server := handlers.NewHTTPServer(testDB.Repo, stripeKey)
 
 		tests := []struct {
 			name               string
