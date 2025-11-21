@@ -31,8 +31,6 @@ func NewRepository(db *pgx.Conn) *Repository {
 	return &Repository{db: db}
 }
 
-
-
 // GetSubscriptionStatus retrieves subscription status for a user/product
 func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productID string) (string, string, time.Time, bool, error) {
 	row := r.db.QueryRow(ctx, `
@@ -52,7 +50,7 @@ func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productI
 // CreateSubscription creates a new subscription record
 func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error {
 	ID := uuid.New()
-	
+
 	// Get customer database ID
 	var customerDBID uuid.UUID
 	err := r.db.QueryRow(ctx, `
@@ -60,7 +58,7 @@ func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeS
 		FROM customers 
 		WHERE stripe_customer_id = $1
 	`, customerID).Scan(&customerDBID)
-	
+
 	if err != nil {
 		return err
 	}
@@ -93,8 +91,6 @@ func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, stripeSubID, 
 	return err
 }
 
-
-
 // GetSubscriptionByStripeID retrieves subscription by Stripe subscription ID
 func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error) {
 	return ScanSubscription(r.db.QueryRow(ctx, `
@@ -109,17 +105,31 @@ func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID 
 // InitializeTables creates the necessary database tables
 func (r *Repository) InitializeTables(ctx context.Context) error {
 	queries := []string{
-		`CREATE TABLE IF NOT EXISTS customers (
+		// Projects table for multi-tenant API key authentication
+		`CREATE TABLE IF NOT EXISTS projects (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			user_id VARCHAR(255) UNIQUE NOT NULL,
-			email VARCHAR(255) NOT NULL,
-			stripe_customer_id VARCHAR(255) UNIQUE,
+			name VARCHAR(255) NOT NULL,
+			api_key VARCHAR(64) UNIQUE NOT NULL,
+			webhook_url TEXT,
+			is_active BOOLEAN DEFAULT true,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
-		
+
+		`CREATE TABLE IF NOT EXISTS customers (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+			user_id VARCHAR(255) NOT NULL,
+			email VARCHAR(255) NOT NULL,
+			stripe_customer_id VARCHAR(255) UNIQUE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			UNIQUE(project_id, user_id)
+		)`,
+
 		`CREATE TABLE IF NOT EXISTS subscriptions (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
 			customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
 			user_id VARCHAR(255) NOT NULL,
 			product_id VARCHAR(255) NOT NULL,
@@ -130,11 +140,15 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-			UNIQUE(user_id, product_id)
+			UNIQUE(project_id, user_id, product_id)
 		)`,
-		
+
+		// Indexes
+		`CREATE INDEX IF NOT EXISTS idx_projects_api_key ON projects(api_key)`,
+		`CREATE INDEX IF NOT EXISTS idx_customers_project_id ON customers(project_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_user_id ON customers(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_id ON customers(stripe_customer_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_subscriptions_project_id ON subscriptions(project_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_id ON subscriptions(stripe_subscription_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_product_id ON subscriptions(product_id)`,
