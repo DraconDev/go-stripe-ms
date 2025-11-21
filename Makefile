@@ -62,7 +62,8 @@ dev: install-deps
 ## Run the application
 run:
 	@echo "Shutting down any process on port 9000..."
-	@if command -v lsof > /dev/null; then kill $(lsof -t -i:9000) 2>/dev/null || true; fi
+	@if command -v lsof > /dev/null; then kill -9 $(lsof -t -i:9000) 2>/dev/null || true; fi
+	@sleep 2
 	@echo "Running $(BINARY_NAME)..."
 	$(GORUN) $(MAIN_FILE)
 
