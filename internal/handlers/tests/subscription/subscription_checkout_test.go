@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
@@ -34,18 +35,19 @@ func TestCreateSubscriptionCheckoutIntegration(t *testing.T) {
 			expectedStatusCode int
 			expectedResponse   map[string]interface{}
 			expectedError      string
+			setupAuth          bool // Added for authentication setup
 		}{
 			{
 				name: "Valid checkout request with real database",
 				requestBody: map[string]interface{}{
 					"user_id":     "test_user_123",
-					"email":       "test@example.com",
-					"product_id":  "premium_plan",
-					"price_id":    "price_test123",
-					"success_url": "https://example.com/success",
-					"cancel_url":  "https://example.com/cancel",
+					"price_id":    config.TEST_SUBSCRIPTION_PRICE_ID,   // Use real test subscription price
+					"product_id":  config.TEST_SUBSCRIPTION_PRODUCT_ID, // Use real test product
+					"success_url": "http://localhost:3000/success",
+					"cancel_url":  "http://localhost:3000/cancel",
 				},
 				expectedStatusCode: http.StatusOK,
+				setupAuth:          true,
 			},
 			{
 				name: "Missing user_id",

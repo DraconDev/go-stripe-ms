@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
@@ -37,17 +38,19 @@ func TestCreateCartCheckoutIntegration(t *testing.T) {
 			{
 				name: "Valid cart checkout request",
 				requestBody: map[string]interface{}{
-					"user_id": "test_user_123",
-					"email":   "test@example.com",
+					"user_id":     "test_user_123",
+					"success_url": "http://localhost:3000/success",
+					"cancel_url":  "http://localhost:3000/cancel",
 					"items": []map[string]interface{}{
 						{
-							"product_id": "prod_test123",
-							"price_id":   "price_test123",
-							"quantity":   2,
+							"price_id": config.TEST_PRICE_ID, // Use real test price
+							"quantity": 2,
+						},
+						{
+							"price_id": config.TEST_PRICE_ID, // Use same test price
+							"quantity": 2,
 						},
 					},
-					"success_url": "https://example.com/success",
-					"cancel_url":  "https://example.com/cancel",
 				},
 				expectedStatusCode: http.StatusOK,
 			},
