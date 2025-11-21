@@ -3,6 +3,7 @@ package cart
 import "fmt"
 
 // validateCartCheckoutRequest validates the cart checkout request
+func validateCartCheckoutRequest(req CartCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || len(req.Items) == 0 ||
 		req.SuccessURL == "" || req.CancelURL == "" {
 		return fmt.Errorf("Missing required fields")
@@ -14,7 +15,7 @@ import "fmt"
 	}
 
 	// Validate each item
-	for i, item := range req.Items {
+	for _, item := range req.Items {
 		if item.PriceID == "" {
 			return fmt.Errorf("Price ID is required for all items")
 		}
