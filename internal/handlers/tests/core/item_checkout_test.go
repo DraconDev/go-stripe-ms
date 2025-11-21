@@ -1,9 +1,7 @@
-```go
 package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +9,6 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
-	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 )
 
 // TestCreateItemCheckoutIntegration tests with real database

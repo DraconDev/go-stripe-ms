@@ -1,4 +1,3 @@
-```go
 package server
 
 import (
@@ -57,7 +56,7 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/portal",
 					bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
-				
+
 				// Inject project ID into context
 				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
 				req = req.WithContext(ctx)
