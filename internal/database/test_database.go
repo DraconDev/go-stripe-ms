@@ -62,11 +62,20 @@ func (td *TestDatabase) Setup(t *testing.T) {
 	log.Println("Test database setup completed")
 }
 
-// Cleanup closes connections
+// Cleanup closes connections and cleans up test data
 func (td *TestDatabase) Cleanup(t *testing.T) {
 	t.Helper()
 
 	if td.Conn != nil {
+		// Clean up test data by truncating tables in reverse dependency order
+		// This ensures foreign key constraints are respected
+		_, err := td.Conn.Exec(td.ctx, `
+			TRUNCATE TABLE subscriptions, customers, projects CASCADE;
+		`)
+		if err != nil {
+			t.Logf("Warning: failed to clean up test data: %v", err)
+		}
+
 		td.Conn.Close(td.ctx)
 	}
 
