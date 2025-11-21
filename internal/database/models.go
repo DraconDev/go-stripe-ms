@@ -7,9 +7,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Project represents a project that can use the payment service
+type Project struct {
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	APIKey     string    `json:"api_key"`
+	WebhookURL string    `json:"webhook_url"`
+	IsActive   bool      `json:"is_active"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
 // Customer represents a user customer record
 type Customer struct {
 	ID               uuid.UUID `json:"id"`
+	ProjectID        uuid.UUID `json:"project_id"`
 	UserID           string    `json:"user_id"`
 	Email            string    `json:"email"`
 	StripeCustomerID string    `json:"stripe_customer_id"`
@@ -20,6 +32,7 @@ type Customer struct {
 // Subscription represents a subscription record
 type Subscription struct {
 	ID                   uuid.UUID `json:"id"`
+	ProjectID            uuid.UUID `json:"project_id"`
 	CustomerID           uuid.UUID `json:"customer_id"`
 	UserID               string    `json:"user_id"`
 	ProductID            string    `json:"product_id"`
@@ -32,11 +45,30 @@ type Subscription struct {
 	UpdatedAt            time.Time `json:"updated_at"`
 }
 
+// ScanProject scans a database row into a Project struct
+func ScanProject(row pgx.Row) (*Project, error) {
+	var project Project
+	err := row.Scan(
+		&project.ID,
+		&project.Name,
+		&project.APIKey,
+		&project.WebhookURL,
+		&project.IsActive,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 // ScanCustomer scans a database row into a Customer struct
 func ScanCustomer(row pgx.Row) (*Customer, error) {
 	var customer Customer
 	err := row.Scan(
 		&customer.ID,
+		&customer.ProjectID,
 		&customer.UserID,
 		&customer.Email,
 		&customer.StripeCustomerID,
@@ -54,6 +86,7 @@ func ScanSubscription(row pgx.Row) (*Subscription, error) {
 	var sub Subscription
 	err := row.Scan(
 		&sub.ID,
+		&sub.ProjectID,
 		&sub.CustomerID,
 		&sub.UserID,
 		&sub.ProductID,
