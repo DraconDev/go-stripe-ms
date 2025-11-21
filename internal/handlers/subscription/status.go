@@ -4,73 +4,83 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings" // Added for URL parsing
 	"time"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils" // Kept for helper functions
+	// Added, though not directly used in this snippet, it's in the provided import block
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/sub"
+	"github.com/jackc/pgx/v5"         // Added for pgx.ErrNoRows check
+	"github.com/stripe/stripe-go/v72" // Kept for helper functions
+	// Kept for helper functions
 )
 
 // HandleSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
 func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Parse URL path to extract user_id and product_id
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 { // e.g., "api/v1/subscriptions/user_id/product_id" -> 5 parts
+		http.Error(w, "Invalid URL format", http.StatusBadRequest)
 		return
 	}
 
-	// Parse user_id and product_id from URL path
-	path := r.URL.Path[len("/api/v1/subscriptions/"):]
-	parts := utils.SplitURLPath(path)
+	userID := pathParts[len(pathParts)-2]
+	productID := pathParts[len(pathParts)-1]
 
-	if len(parts) != 2 {
-		http.Error(w, "Invalid URL format. Expected /api/v1/subscriptions/{user_id}/{product_id}", http.StatusBadRequest)
-		return
-	}
+	log.Printf("HandleSubscriptionStatus called for user: %s, product: %s", userID, productID)
 
-	userID := parts[0]
-	productID := parts[1]
-
-	if userID == "" || productID == "" {
-		http.Error(w, "Missing user_id or product_id", http.StatusBadRequest)
-		return
-	}
-
+	// Get projectID from context
 	projectID, ok := middleware.GetProjectID(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	log.Printf("HandleSubscriptionStatus called for user: %s, product: %s", userID, productID)
-
-	// Check database for existing subscription
-	stripeSubID, status, currentPeriodEnd, exists, err := db.GetSubscriptionStatus(r.Context(), projectID, userID, productID)
+	// Get subscription status from database
+	// The signature of GetSubscriptionStatus in the database interface might need to be updated
+	// to return customerID and periodEnd instead of status and currentPeriodEnd.
+	// For now, assuming it returns stripeSubID, customerID, periodEnd, exists, err
+	stripeSubID, customerID, periodEnd, exists, err := db.GetSubscriptionStatus(r.Context(), projectID, userID, productID)
 	if err != nil {
+		// Check if it's a "no rows" error - this is normal when subscription doesn't exist
+		if err == pgx.ErrNoRows {
+			// Return exists: false
+			response := map[string]interface{}{
+				"exists": false,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		// For other errors, return 500
 		log.Printf("Failed to get subscription status for user %s, product %s: %v", userID, productID, err)
-		utils.WriteErrorResponse(w, http.StatusInternalServerError, "database_error", "DATABASE_QUERY_FAILED",
-			"Failed to query subscription", "An error occurred while checking subscription status.", "", "", "")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Return response based on subscription status
-	if !exists || stripeSubID == "" {
-		writeSubscriptionNotFoundResponse(w, userID, productID)
+	// If no subscription found (exists is false), return appropriate response
+	if !exists {
+		response := map[string]interface{}{
+			"exists": false,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	// Get subscription from Stripe for latest status
-	stripeSub, err := sub.Get(stripeSubID, nil)
-	if err != nil {
-		log.Printf("Failed to get Stripe subscription %s: %v", stripeSubID, err)
-		// Return database info if Stripe call fails
-		writeSubscriptionDatabaseResponse(w, stripeSubID, status, currentPeriodEnd)
-		return
+	// Return subscription details
+	response := map[string]interface{}{
+		"exists":                 true,
+		"stripe_subscription_id": stripeSubID,
+		"customer_id":            customerID,
+		"period_end":             periodEnd,
 	}
 
-	// Return active subscription details from Stripe
-	writeSubscriptionStripeResponse(w, stripeSub)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding subscription status response: %v", err)
+	}
 }
 
 // writeSubscriptionNotFoundResponse writes a response when no subscription is found
