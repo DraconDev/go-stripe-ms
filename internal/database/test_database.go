@@ -152,7 +152,7 @@ func (td *TestDatabase) CreateTestData() error {
 	project := &Project{
 		ID:        projectID,
 		Name:      "Test Project",
-		APIKey:    "sk_test_123",
+		APIKey:    "sk_test_" + uuid.New().String(),
 		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -166,7 +166,7 @@ func (td *TestDatabase) CreateTestData() error {
 		ProjectID:        projectID,
 		UserID:           "test_user_123",
 		Email:            "test@example.com",
-		StripeCustomerID: "cus_test123",
+		StripeCustomerID: "cus_test_" + uuid.New().String(),
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -181,7 +181,7 @@ func (td *TestDatabase) CreateTestData() error {
 		UserID:               "test_user_123",
 		ProductID:            "premium_plan",
 		PriceID:              "price_test123",
-		StripeSubscriptionID: "sub_test123",
+		StripeSubscriptionID: "sub_test_" + uuid.New().String(),
 		Status:               "active",
 		CurrentPeriodStart:   time.Now(),
 		CurrentPeriodEnd:     time.Now().AddDate(0, 0, 30),
