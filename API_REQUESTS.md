@@ -266,7 +266,7 @@ Or test individual endpoints:
 ```bash
 # Test subscription checkout
 curl -X POST http://localhost:9000/api/v1/checkout/subscription \
-  -H "X-API-Key: $(grep '^API_KEY=' .env | cut -d '=' -f2)" \
+  -H "X-API-Key: $(grep '^PAYMENT_MS_API_KEY=' .env | cut -d '=' -f2)" \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "test_user",

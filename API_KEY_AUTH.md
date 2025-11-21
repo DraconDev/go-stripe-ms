@@ -7,7 +7,7 @@ This Payment MS uses API key authentication to secure access to payment endpoint
 ### 1. Set Your API Key
 Add to your `.env` file:
 ```bash
-API_KEY=your_api_key_here
+PAYMENT_MS_API_KEY=your_api_key_here
 ```
 
 ### 2. Use in Requests
@@ -107,7 +107,7 @@ The API key in your request doesn't match the one in `.env`.
 The server can't find the API_KEY in your environment.
 
 **Fix:**
-1. Add `API_KEY=your_key_here` to your `.env` file
+1. Add `PAYMENT_MS_API_KEY=your_key_here` to your `.env` file
 2. Restart the server
 
 ## Production Deployment
@@ -117,12 +117,12 @@ Set the API_KEY in your production environment:
 
 **Heroku:**
 ```bash
-heroku config:set API_KEY=your_production_key
+heroku config:set PAYMENT_MS_API_KEY=your_production_key
 ```
 
 **Docker:**
 ```bash
-docker run -e API_KEY=your_production_key ...
+docker run -e PAYMENT_MS_API_KEY=your_production_key ...
 ```
 
 **AWS/GCP:**
