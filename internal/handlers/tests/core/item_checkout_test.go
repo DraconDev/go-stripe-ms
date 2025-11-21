@@ -88,6 +88,7 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 				requestBody: map[string]interface{}{
 					"user_id":     "test_user_123",
 					"email":       "test@example.com",
+					"product_id":  "prod_test123",
 					"price_id":    "price_test123",
 					"quantity":    0,
 					"success_url": "https://example.com/success",
