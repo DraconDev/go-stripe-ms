@@ -38,7 +38,7 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 				name: "Valid portal request",
 				requestBody: map[string]interface{}{
 					"user_id":    "test_user_123",
-					"return_url": "https://example.com/account",
+					"return_url": "http://localhost:3000/account",
 				},
 				expectedStatusCode: http.StatusOK,
 			},
