@@ -11,14 +11,14 @@ import (
 // RepositoryInterface defines the interface for database operations
 type RepositoryInterface interface {
 	// Customer operations
-	FindOrCreateStripeCustomer(ctx context.Context, userID, email string) (string, error)
-	UpdateCustomerStripeID(ctx context.Context, userID, stripeCustomerID string) error
+	FindOrCreateStripeCustomer(ctx context.Context, projectID uuid.UUID, userID, email string) (string, error)
+	UpdateCustomerStripeID(ctx context.Context, projectID uuid.UUID, userID, stripeCustomerID string) error
 	GetCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error)
-	GetCustomerByUserID(ctx context.Context, userID string) (*Customer, error)
+	GetCustomerByUserID(ctx context.Context, projectID uuid.UUID, userID string) (*Customer, error)
 
 	// Subscription operations
-	GetSubscriptionStatus(ctx context.Context, userID, productID string) (string, string, time.Time, bool, error)
-	CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error
+	GetSubscriptionStatus(ctx context.Context, projectID uuid.UUID, userID, productID string) (string, string, time.Time, bool, error)
+	CreateSubscription(ctx context.Context, projectID uuid.UUID, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error
 	UpdateSubscriptionStatus(ctx context.Context, stripeSubID, status string, periodEnd time.Time) error
 	GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error)
 
