@@ -39,6 +39,7 @@ func TestCreateCartCheckoutIntegration(t *testing.T) {
 				name: "Valid cart checkout request",
 				requestBody: map[string]interface{}{
 					"user_id":     "test_user_123",
+					"email":       "test@example.com",
 					"success_url": "http://localhost:3000/success",
 					"cancel_url":  "http://localhost:3000/cancel",
 					"items": []map[string]interface{}{

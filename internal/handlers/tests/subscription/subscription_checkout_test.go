@@ -41,6 +41,7 @@ func TestCreateSubscriptionCheckoutIntegration(t *testing.T) {
 				name: "Valid checkout request with real database",
 				requestBody: map[string]interface{}{
 					"user_id":     "test_user_123",
+					"email":       "test@example.com",
 					"price_id":    config.TEST_SUBSCRIPTION_PRICE_ID,   // Use real test subscription price
 					"product_id":  config.TEST_SUBSCRIPTION_PRODUCT_ID, // Use real test product
 					"success_url": "http://localhost:3000/success",

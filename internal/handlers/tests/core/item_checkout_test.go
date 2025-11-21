@@ -58,10 +58,12 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 					"product_id": "prod_test123",
 					"email":      "test@example.com",
 					// quantity omitted, should default to 1
+					"user_id":     "test_user_123",
 					"success_url": "https://example.com/success",
 					"cancel_url":  "https://example.com/cancel",
 				},
 				expectedStatusCode: http.StatusOK,
+				setupAuth:          true,
 			},
 			{
 				name: "Missing price_id",
