@@ -89,6 +89,7 @@ func (td *TestDatabase) CreateTestCustomer(customer *Customer) error {
 func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error {
 	// First ensure customer exists
 	customer := &Customer{
+		ProjectID:        subscription.ProjectID,
 		UserID:           subscription.UserID,
 		Email:            "test@example.com",
 		StripeCustomerID: "cus_test123",
@@ -102,27 +103,27 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 	// Get customer ID
 	var customerID string
 	err := td.Conn.QueryRow(td.ctx, `
-		SELECT id::text FROM customers WHERE user_id = $1
-	`, subscription.UserID).Scan(&customerID)
+		SELECT id::text FROM customers WHERE project_id = $1 AND user_id = $2
+	`, subscription.ProjectID, subscription.UserID).Scan(&customerID)
 	if err != nil {
 		return err
 	}
 
 	_, err = td.Conn.Exec(td.ctx, `
 		INSERT INTO subscriptions (
-			customer_id, user_id, product_id, price_id,
+			project_id, customer_id, user_id, product_id, price_id,
 			stripe_subscription_id, status, current_period_start, current_period_end,
 			created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 		)
-		ON CONFLICT (user_id, product_id) DO UPDATE SET
+		ON CONFLICT (project_id, user_id, product_id) DO UPDATE SET
 			stripe_subscription_id = EXCLUDED.stripe_subscription_id,
 			status = EXCLUDED.status,
 			current_period_start = EXCLUDED.current_period_start,
 			current_period_end = EXCLUDED.current_period_end,
 			updated_at = EXCLUDED.updated_at
-	`, customerID, subscription.UserID, subscription.ProductID, subscription.PriceID,
+	`, subscription.ProjectID, customerID, subscription.UserID, subscription.ProductID, subscription.PriceID,
 		subscription.StripeSubscriptionID, subscription.Status,
 		subscription.CurrentPeriodStart, subscription.CurrentPeriodEnd,
 		subscription.CreatedAt, subscription.UpdatedAt)
