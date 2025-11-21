@@ -88,14 +88,16 @@ func (td *TestDatabase) CreateTestProject(project *Project) error {
 
 // CreateTestCustomer creates a test customer in the database
 func (td *TestDatabase) CreateTestCustomer(customer *Customer) error {
-	_, err := td.Conn.Exec(td.ctx, `
+	err := td.Conn.QueryRow(td.ctx, `
 		INSERT INTO customers (id, project_id, user_id, email, stripe_customer_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (project_id, user_id) DO UPDATE SET
+			id = EXCLUDED.id,
 			email = EXCLUDED.email,
 			stripe_customer_id = EXCLUDED.stripe_customer_id,
 			updated_at = EXCLUDED.updated_at
-	`, customer.ID, customer.ProjectID, customer.UserID, customer.Email, customer.StripeCustomerID, customer.CreatedAt, customer.UpdatedAt)
+		RETURNING id
+	`, customer.ID, customer.ProjectID, customer.UserID, customer.Email, customer.StripeCustomerID, customer.CreatedAt, customer.UpdatedAt).Scan(&customer.ID)
 	return err
 }
 
