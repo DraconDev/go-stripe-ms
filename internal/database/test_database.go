@@ -158,12 +158,15 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 
 // CreateTestData creates test customers and subscriptions
 func (td *TestDatabase) CreateTestData() (*Project, error) {
+	// Use timestamp to ensure uniqueness across parallel test runs
+	timestamp := time.Now().UnixNano()
+
 	// Create test project
 	projectID := uuid.New()
 	project := &Project{
 		ID:        projectID,
-		Name:      "Test Project",
-		APIKey:    "sk_test_" + uuid.New().String(),
+		Name:      fmt.Sprintf("Test Project %d", timestamp),
+		APIKey:    fmt.Sprintf("sk_test_%d_%s", timestamp, uuid.New().String()[:8]),
 		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -177,9 +180,9 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	customer := &Customer{
 		ID:               customerID,
 		ProjectID:        projectID,
-		UserID:           "test_user_123",
-		Email:            "test@example.com",
-		StripeCustomerID: "cus_test_" + uuid.New().String(),
+		UserID:           fmt.Sprintf("test_user_%d", timestamp),
+		Email:            fmt.Sprintf("test_%d@example.com", timestamp),
+		StripeCustomerID: fmt.Sprintf("cus_test_%d", timestamp),
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -192,8 +195,8 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	subscription := &Subscription{
 		ProjectID:            projectID,
 		CustomerID:           customerID,
-		UserID:               "test_user_123",
-		StripeSubscriptionID: "sub_test_" + uuid.New().String(),
+		UserID:               customer.UserID,
+		StripeSubscriptionID: fmt.Sprintf("sub_test_%d", timestamp),
 		ProductID:            "premium_plan",
 		PriceID:              "price_123",
 		Status:               "active",
