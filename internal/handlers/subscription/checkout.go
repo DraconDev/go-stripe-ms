@@ -18,6 +18,7 @@ import (
 type SubscriptionCheckoutRequest struct {
 	UserID     string `json:"user_id"`
 	Email      string `json:"email"`
+	ProductID  string `json:"product_id"`
 	PriceID    string `json:"price_id"`
 	SuccessURL string `json:"success_url"`
 	CancelURL  string `json:"cancel_url"`
@@ -58,6 +59,29 @@ func HandleSubscriptionCheckout(db database.RepositoryInterface, stripeSecret st
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
 		return
 	}
+
+	// Create subscription checkout session
+	checkoutSession, err := createSubscriptionCheckoutSession(req, stripeCustomerID)
+	if err != nil {
+		log.Printf("Failed to create Stripe subscription session for user %s: %v", req.UserID, err)
+		http.Error(w, "Failed to create subscription session", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Created Stripe subscription session: %s for user: %s", checkoutSession.ID, req.UserID)
+
+	// Return response
+	writeSubscriptionCheckoutResponse(w, checkoutSession)
+}
+
+// validateSubscriptionCheckoutRequest validates the subscription checkout request
+func validateSubscriptionCheckoutRequest(req SubscriptionCheckoutRequest) error {
+	if req.UserID == "" || req.Email == "" || req.PriceID == "" ||
+		req.SuccessURL == "" || req.CancelURL == "" {
+		return fmt.Errorf("missing required fields")
+	}
+	return nil
+}
 
 	// Use checkout session builder
 	builder := core.NewCheckoutSessionBuilder(stripeCustomerID, req.UserID, req.SuccessURL, req.CancelURL, "subscription")
