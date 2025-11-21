@@ -84,7 +84,7 @@ func HandleItemCheckout(db database.RepositoryInterface, stripeSecret string, w 
 func validateItemCheckoutRequest(req ItemCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || req.ProductID == "" ||
 		req.PriceID == "" || req.SuccessURL == "" || req.CancelURL == "" {
-		return fmt.Errorf("missing required fields")
+		return fmt.Errorf("Missing required fields")
 	}
 	return nil
 }

@@ -78,7 +78,7 @@ func HandleSubscriptionCheckout(db database.RepositoryInterface, stripeSecret st
 func validateSubscriptionCheckoutRequest(req SubscriptionCheckoutRequest) error {
 	if req.UserID == "" || req.Email == "" || req.PriceID == "" ||
 		req.SuccessURL == "" || req.CancelURL == "" {
-		return fmt.Errorf("missing required fields")
+		return fmt.Errorf("Missing required fields")
 	}
 	return nil
 }
