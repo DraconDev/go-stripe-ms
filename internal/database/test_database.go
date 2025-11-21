@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -146,8 +147,23 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 
 // CreateTestData creates test customers and subscriptions
 func (td *TestDatabase) CreateTestData() error {
+	// Create test project
+	projectID := uuid.New()
+	project := &Project{
+		ID:        projectID,
+		Name:      "Test Project",
+		APIKey:    "sk_test_123",
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := td.CreateTestProject(project); err != nil {
+		return fmt.Errorf("failed to create test project: %w", err)
+	}
+
 	// Create test customer
 	customer := &Customer{
+		ProjectID:        projectID,
 		UserID:           "test_user_123",
 		Email:            "test@example.com",
 		StripeCustomerID: "cus_test123",
@@ -156,11 +172,12 @@ func (td *TestDatabase) CreateTestData() error {
 	}
 
 	if err := td.CreateTestCustomer(customer); err != nil {
-		return err
+		return fmt.Errorf("failed to create test customer: %w", err)
 	}
 
 	// Create test subscription
 	subscription := &Subscription{
+		ProjectID:            projectID,
 		UserID:               "test_user_123",
 		ProductID:            "premium_plan",
 		PriceID:              "price_test123",
