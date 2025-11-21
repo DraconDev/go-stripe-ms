@@ -38,14 +38,14 @@ echo ""
 # Test 4: Valid API key from .env
 echo "✅ Test 4: Valid API Key from .env (Should Pass Auth)"
 curl -s -X POST \
-  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Key: $PAYMENT_MS_API_KEY" \
   -H "Content-Type: application/json" \
   http://localhost:9000/api/v1/checkout/subscription | jq
 echo ""
 
 # Test 5: Get subscription status with valid key
 echo "✅ Test 5: Get Subscription Status (With Valid Key)"
-curl -s -H "X-API-Key: $API_KEY" \
+curl -s -H "X-API-Key: $PAYMENT_MS_API_KEY" \
   http://localhost:9000/api/v1/subscriptions/test_user/prod_test | jq
 echo ""
 
