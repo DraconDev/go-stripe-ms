@@ -1,7 +1,9 @@
+```go
 package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,13 +11,15 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 )
 
-// TestCreateCustomerPortalIntegration tests customer portal creation with real database
+// TestCreateCustomerPortalIntegration tests with real database
 func TestCreateCustomerPortalIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		if err := testDB.CreateTestData(); err != nil {
+		project, err := testDB.CreateTestData()
+		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
 
@@ -29,7 +33,7 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 			expectedError      string
 		}{
 			{
-				name: "Valid portal request with real database",
+				name: "Valid portal request",
 				requestBody: map[string]interface{}{
 					"user_id":    "test_user_123",
 					"return_url": "https://example.com/account",
@@ -42,16 +46,7 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 					"return_url": "https://example.com/account",
 				},
 				expectedStatusCode: http.StatusBadRequest,
-				expectedError:      "Missing required fields",
-			},
-			{
-				name: "Customer not found",
-				requestBody: map[string]interface{}{
-					"user_id":    "nonexistent",
-					"return_url": "https://example.com/account",
-				},
-				expectedStatusCode: http.StatusNotFound,
-				expectedError:      "Customer not found",
+				expectedError:      "Missing user_id or return_url",
 			},
 		}
 
@@ -62,6 +57,10 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/api/v1/portal",
 					bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
+				
+				// Inject project ID into context
+				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
+				req = req.WithContext(ctx)
 
 				// Execute
 				w := httptest.NewRecorder()

@@ -15,7 +15,8 @@ import (
 func TestCreateCartCheckoutIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		if err := testDB.CreateTestData(); err != nil {
+		project, err := testDB.CreateTestData()
+		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
 
@@ -34,8 +35,11 @@ func TestCreateCartCheckoutIntegration(t *testing.T) {
 					"user_id": "test_user_123",
 					"email":   "test@example.com",
 					"items": []map[string]interface{}{
-						{"price_id": "price_1", "quantity": 1},
-						{"price_id": "price_2", "quantity": 2},
+						{
+							"product_id": "prod_test123",
+							"price_id":   "price_test123",
+							"quantity":   2,
+						},
 					},
 					"success_url": "https://example.com/success",
 					"cancel_url":  "https://example.com/cancel",
