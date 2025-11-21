@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 )
 
 // APIKeyAuth middleware validates API keys
@@ -22,12 +21,6 @@ func (a *APIKeyAuth) Middleware(next http.Handler) http.Handler {
 		apiKey := r.Header.Get("X-API-Key")
 		if apiKey == "" {
 			http.Error(w, `{"error":"Missing X-API-Key header"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// Validate API key format
-		if !strings.HasPrefix(apiKey, "proj_") {
-			http.Error(w, `{"error":"Invalid API key format"}`, http.StatusUnauthorized)
 			return
 		}
 
