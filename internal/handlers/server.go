@@ -8,7 +8,6 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/billing"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/cart"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers/documentation"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/subscription"
 	"github.com/stripe/stripe-go/v72"
 )

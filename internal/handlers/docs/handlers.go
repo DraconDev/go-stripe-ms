@@ -1,5 +1,5 @@
-// Package documentation provides handlers for API documentation endpoints
-package documentation
+// Package docs provides handlers for API documentation endpoints
+package docs
 
 import (
 	"encoding/json"
