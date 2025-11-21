@@ -13,7 +13,6 @@ import (
 func TestAPIKeyAuth_Middleware(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Create a test project with a known API key
-		apiKey := "sk_test_auth_middleware"
 		// Setup test database with a known project
 		project, customer, err := testDB.CreateTestData()
 		if err != nil {
@@ -30,7 +29,7 @@ func TestAPIKeyAuth_Middleware(t *testing.T) {
 		}{
 			{
 				name:           "Valid API Key",
-				apiKey:         apiKey,
+				apiKey:         project.APIKey, // Use the actual API key from created project
 				expectedStatus: http.StatusOK,
 			},
 			{
