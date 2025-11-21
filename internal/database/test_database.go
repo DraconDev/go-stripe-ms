@@ -72,6 +72,19 @@ func (td *TestDatabase) Cleanup(t *testing.T) {
 	log.Println("Test database cleanup completed")
 }
 
+// CreateTestProject creates a test project in the database
+func (td *TestDatabase) CreateTestProject(project *Project) error {
+	_, err := td.Conn.Exec(td.ctx, `
+		INSERT INTO projects (id, name, api_key, webhook_url, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (api_key) DO UPDATE SET
+			name = EXCLUDED.name,
+			webhook_url = EXCLUDED.webhook_url,
+			updated_at = EXCLUDED.updated_at
+	`, project.ID, project.Name, project.APIKey, project.WebhookURL, project.IsActive, project.CreatedAt, project.UpdatedAt)
+	return err
+}
+
 // CreateTestCustomer creates a test customer in the database
 func (td *TestDatabase) CreateTestCustomer(customer *Customer) error {
 	_, err := td.Conn.Exec(td.ctx, `
