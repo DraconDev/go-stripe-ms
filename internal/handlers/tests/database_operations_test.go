@@ -40,10 +40,14 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 
 		t.Run("FindOrCreateStripeCustomer", func(t *testing.T) {
 			// Test customer creation
-			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx, projectID,
+			customerID, err := testDB.Repo.FindOrCreateStripeCustomer(ctx, projectID,
 				testUserID1, fmt.Sprintf("test%d@example.com", timestamp))
 			if err != nil {
 				t.Fatalf("Failed to create customer: %v", err)
+			}
+
+			if customerID == "" {
+				t.Fatal("Customer ID should not be empty")
 			}
 
 			// Test customer retrieval
@@ -57,6 +61,7 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 			if customer.UserID != testUserID1 {
 				t.Errorf("Expected user ID '%s', got '%s'", testUserID1, customer.UserID)
 			}
+			// Note: stripe_customer_id may be NULL until Stripe API is called
 		})
 
 		t.Run("CreateSubscription", func(t *testing.T) {
