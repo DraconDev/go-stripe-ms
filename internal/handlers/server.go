@@ -9,7 +9,6 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/cart"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/subscription"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers/utility"
 	"github.com/stripe/stripe-go/v72"
 )
 
@@ -53,17 +52,17 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 
 // DebugHandler handles GET /debug
 func (s *HTTPServer) DebugHandler(w http.ResponseWriter, r *http.Request) {
-	utility.HandleDebug(w, r)
+	documentation.HandleDebug(w, r)
 }
 
 // OpenAPIHandler serves the OpenAPI specification
 func (s *HTTPServer) OpenAPIHandler(w http.ResponseWriter, r *http.Request) {
-	utility.HandleOpenAPI(w, r)
+	documentation.HandleOpenAPI(w, r)
 }
 
 // DocsHandler serves a simple HTML documentation page
 func (s *HTTPServer) DocsHandler(w http.ResponseWriter, r *http.Request) {
-	utility.HandleDocs(w, r)
+	documentation.HandleDocs(w, r)
 }
 
 // CreateSubscriptionCheckout handles POST /api/v1/checkout/subscription
