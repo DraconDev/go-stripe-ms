@@ -17,7 +17,7 @@ func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, userID, ema
 		FROM customers 
 		WHERE user_id = $1
 	`, userID).Scan(&existingCustomerID)
-	
+
 	if err == nil && existingCustomerID != "" {
 		log.Printf("Found existing customer for user %s: %s", userID, existingCustomerID)
 		return existingCustomerID, nil
@@ -54,7 +54,7 @@ func (r *Repository) UpdateCustomerStripeID(ctx context.Context, userID, stripeC
 // GetCustomerByStripeID retrieves customer by Stripe customer ID
 func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID string) (*Customer, error) {
 	return ScanCustomer(r.db.QueryRow(ctx, `
-		SELECT id, user_id, email, stripe_customer_id, created_at, updated_at
+		SELECT id, project_id, user_id, email, stripe_customer_id, created_at, updated_at
 		FROM customers 
 		WHERE stripe_customer_id = $1
 	`, stripeCustomerID))
@@ -63,7 +63,7 @@ func (r *Repository) GetCustomerByStripeID(ctx context.Context, stripeCustomerID
 // GetCustomerByUserID retrieves customer by user ID
 func (r *Repository) GetCustomerByUserID(ctx context.Context, userID string) (*Customer, error) {
 	return ScanCustomer(r.db.QueryRow(ctx, `
-		SELECT id, user_id, email, stripe_customer_id, created_at, updated_at
+		SELECT id, project_id, user_id, email, stripe_customer_id, created_at, updated_at
 		FROM customers 
 		WHERE user_id = $1
 	`, userID))
