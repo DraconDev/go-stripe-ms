@@ -11,7 +11,10 @@ import (
 // WithTestDatabase runs a test with a real database
 func WithTestDatabase(t *testing.T, testFunc func(*testing.T, *TestDatabase)) {
 	t.Helper()
-	
+
+	// Ensure environment is loaded
+	autoLoadEnv()
+
 	// Check if database is configured
 	if os.Getenv("DATABASE_URL") == "" {
 		t.Skip("DATABASE_URL not set, skipping database tests")
@@ -19,10 +22,10 @@ func WithTestDatabase(t *testing.T, testFunc func(*testing.T, *TestDatabase)) {
 
 	testDB := NewTestDatabase(t)
 	defer testDB.Cleanup(t)
-	
+
 	// Setup database
 	testDB.Setup(t)
-	
+
 	// Run test
 	testFunc(t, testDB)
 }
@@ -30,7 +33,7 @@ func WithTestDatabase(t *testing.T, testFunc func(*testing.T, *TestDatabase)) {
 // WithRealDatabase runs a test with the real production database
 func WithRealDatabase(t *testing.T, testFunc func(*testing.T, *Repository)) {
 	t.Helper()
-	
+
 	// Check if database is configured
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -38,7 +41,7 @@ func WithRealDatabase(t *testing.T, testFunc func(*testing.T, *Repository)) {
 	}
 
 	ctx := context.Background()
-	
+
 	// Connect to real database
 	conn, err := pgx.Connect(ctx, dbURL)
 	if err != nil {
@@ -48,7 +51,7 @@ func WithRealDatabase(t *testing.T, testFunc func(*testing.T, *Repository)) {
 
 	// Create repository
 	repo := NewRepository(conn)
-	
+
 	// Run test
 	testFunc(t, repo)
 }
