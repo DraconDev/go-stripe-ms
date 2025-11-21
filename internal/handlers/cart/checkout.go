@@ -7,32 +7,33 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 )
 
 // HandleCartCheckout handles POST /api/v1/checkout/cart for e-commerce with multiple items
 func HandleCartCheckout(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		utils.WriteErrorResponse(w, http.StatusMethodNotAllowed, "method_not_allowed", "METHOD_NOT_ALLOWED", "Method not allowed", "Only POST method is allowed", "", "", "")
 		return
 	}
 
 	var req CartCheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding cart request: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "INVALID_BODY", "Invalid request body", "Failed to decode JSON body", "", "", "")
 		return
 	}
 
 	// Validate cart checkout request
 	if err := validateCartCheckoutRequest(req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "VALIDATION_FAILED", err.Error(), "Request validation failed", "", "", "")
 		return
 	}
 
 	projectID, ok := middleware.GetProjectID(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		utils.WriteErrorResponse(w, http.StatusUnauthorized, "authentication_error", "UNAUTHORIZED", "Unauthorized", "Missing or invalid authentication", "", "", "")
 		return
 	}
 
@@ -42,7 +43,7 @@ func HandleCartCheckout(db database.RepositoryInterface, stripeSecret string, w 
 	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, projectID, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
-		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "api_error", "CUSTOMER_ERROR", "Failed to create or find customer", err.Error(), "user_id", "", "")
 		return
 	}
 
@@ -50,7 +51,7 @@ func HandleCartCheckout(db database.RepositoryInterface, stripeSecret string, w 
 	checkoutSession, err := createCartStripeSession(req, stripeCustomerID)
 	if err != nil {
 		log.Printf("Failed to create Stripe cart session for user %s: %v", req.UserID, err)
-		http.Error(w, "Failed to create cart session", http.StatusInternalServerError)
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "api_error", "STRIPE_ERROR", "Failed to create cart session", err.Error(), "", "", "")
 		return
 	}
 
