@@ -105,7 +105,7 @@ func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, stripeSubID, 
 // GetSubscriptionByStripeID retrieves subscription by Stripe subscription ID
 func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error) {
 	return ScanSubscription(r.db.QueryRow(ctx, `
-		SELECT id, customer_id, user_id, product_id, price_id,
+		SELECT id, project_id, customer_id, user_id, product_id, price_id,
 			stripe_subscription_id, status, current_period_start, current_period_end,
 			created_at, updated_at
 		FROM subscriptions 

@@ -14,6 +14,7 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	handlerSvc "github.com/DraconDev/go-stripe-ms/internal/handlers"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/DraconDev/go-stripe-ms/internal/webhooks"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
@@ -99,23 +100,26 @@ func (s *Server) StartHTTPServer() error {
 
 // setupAPIRoutes sets up all HTTP routes for the billing API
 func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
-	// Health check
-	// Root endpoint
-	mux.HandleFunc("/", s.apiServer.RootHandler)
+	// Create API key middleware
+	apiKeyAuth := middleware.NewAPIKeyAuth(s.db)
 
+	// Public endpoints (no authentication required)
+	mux.HandleFunc("/", s.apiServer.RootHandler)
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 
-	// Checkout endpoints - split by payment type
-	mux.HandleFunc("POST /api/v1/checkout/subscription", s.apiServer.CreateSubscriptionCheckout)
-	mux.HandleFunc("POST /api/v1/checkout/item", s.apiServer.CreateItemCheckout)
-	mux.HandleFunc("POST /api/v1/checkout/cart", s.apiServer.CreateCartCheckout)
-
-	// Billing API endpoints
-	mux.HandleFunc("GET /api/v1/subscriptions/{user_id}/{product_id}", s.apiServer.GetSubscriptionStatus)
-	mux.HandleFunc("POST /api/v1/portal", s.apiServer.CreateCustomerPortal)
-
-	// Webhook endpoint
+	// Webhook endpoint (authenticated by Stripe signature, not API key)
 	s.webhookHandler.SetupRoutes(mux)
+
+	// Protected API endpoints (require X-API-Key header)
+	protectedMux := http.NewServeMux()
+	protectedMux.HandleFunc("POST /api/v1/checkout/subscription", s.apiServer.CreateSubscriptionCheckout)
+	protectedMux.HandleFunc("POST /api/v1/checkout/item", s.apiServer.CreateItemCheckout)
+	protectedMux.HandleFunc("POST /api/v1/checkout/cart", s.apiServer.CreateCartCheckout)
+	protectedMux.HandleFunc("GET /api/v1/subscriptions/{user_id}/{product_id}", s.apiServer.GetSubscriptionStatus)
+	protectedMux.HandleFunc("POST /api/v1/portal", s.apiServer.CreateCustomerPortal)
+
+	// Wrap protected routes with API key middleware
+	mux.Handle("/api/", apiKeyAuth.Middleware(protectedMux))
 
 	// Debug endpoint (development only)
 	env := os.Getenv("ENVIRONMENT")
