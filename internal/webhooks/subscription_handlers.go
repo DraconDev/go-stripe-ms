@@ -13,10 +13,10 @@ import (
 // handleCustomerSubscriptionCreated processes subscription creation events
 func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Context, event stripe.Event) {
 	var subscription struct {
-		ID               string                 `json:"id"`
-		Customer         struct{ ID string }   `json:"customer"`
-		Status           string                 `json:"status"`
-		Items            struct {
+		ID       string              `json:"id"`
+		Customer struct{ ID string } `json:"customer"`
+		Status   string              `json:"status"`
+		Items    struct {
 			Data []struct {
 				Price struct {
 					ID      string `json:"id"`
@@ -27,14 +27,14 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Con
 		CurrentPeriodStart int64 `json:"current_period_start"`
 		CurrentPeriodEnd   int64 `json:"current_period_end"`
 	}
-	
+
 	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		log.Printf("Error unmarshaling subscription event: %v", err)
 		return
 	}
 
 	log.Printf("Subscription created: %s for customer: %s", subscription.ID, subscription.Customer.ID)
-	
+
 	// Get customer details
 	customer, err := h.getCustomerByStripeID(ctx, subscription.Customer.ID)
 	if err != nil {
@@ -52,6 +52,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Con
 	// Create subscription in database
 	err = h.db.CreateSubscription(
 		ctx,
+		customer.ProjectID,
 		subscription.Customer.ID,
 		subscription.ID,
 		productID,
@@ -61,7 +62,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Con
 		time.Unix(subscription.CurrentPeriodStart, 0),
 		time.Unix(subscription.CurrentPeriodEnd, 0),
 	)
-	
+
 	if err != nil {
 		log.Printf("Error creating subscription in database: %v", err)
 	} else {
@@ -76,7 +77,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(ctx context.Con
 		Status           string `json:"status"`
 		CurrentPeriodEnd int64  `json:"current_period_end"`
 	}
-	
+
 	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		log.Printf("Error unmarshaling subscription event: %v", err)
 		return
@@ -87,14 +88,14 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionUpdated(ctx context.Con
 	// Update subscription status with timeout
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	
+
 	err := h.db.UpdateSubscriptionStatus(
 		timeoutCtx,
 		subscription.ID,
 		subscription.Status,
 		time.Unix(subscription.CurrentPeriodEnd, 0),
 	)
-	
+
 	if err != nil {
 		log.Printf("Error updating subscription in database: %v", err)
 	} else {
@@ -108,7 +109,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(ctx context.Con
 		ID               string `json:"id"`
 		CurrentPeriodEnd int64  `json:"current_period_end"`
 	}
-	
+
 	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 		log.Printf("Error unmarshaling subscription event: %v", err)
 		return
@@ -119,14 +120,14 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionDeleted(ctx context.Con
 	// Update subscription status to canceled with timeout
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	
+
 	err := h.db.UpdateSubscriptionStatus(
 		timeoutCtx,
 		subscription.ID,
 		"canceled",
 		time.Unix(subscription.CurrentPeriodEnd, 0),
 	)
-	
+
 	if err != nil {
 		log.Printf("Error updating subscription status to canceled: %v", err)
 	} else {
