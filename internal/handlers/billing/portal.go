@@ -69,7 +69,7 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 		return
 	}
 
-	log.Printf("Created Stripe portal session: %s for user: %s", s.ID, req.UserID)
+	log.Printf("Created Stripe portal session: %s for user: %s", portalSession.ID, req.UserID)
 
 	response := struct {
 		PortalSessionID string `json:"portal_session_id"`

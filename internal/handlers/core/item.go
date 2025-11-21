@@ -9,6 +9,7 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/stripe/stripe-go/v72"
 	checkoutsession "github.com/stripe/stripe-go/v72/checkout/session"
 )
@@ -49,10 +50,16 @@ func HandleItemCheckout(db database.RepositoryInterface, stripeSecret string, w 
 		req.Quantity = 1
 	}
 
+	projectID, ok := middleware.GetProjectID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	log.Printf("HandleItemCheckout called for user: %s, product: %s, quantity: %d", req.UserID, req.ProductID, req.Quantity)
 
 	// Find or create Stripe customer
-	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, req.UserID, req.Email)
+	stripeCustomerID, err := common.FindOrCreateStripeCustomer(r.Context(), db, projectID, req.UserID, req.Email)
 	if err != nil {
 		log.Printf("Failed to find or create Stripe customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Failed to create or find customer", http.StatusInternalServerError)
