@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/billing"
@@ -55,16 +53,8 @@ func (s *HTTPServer) CreateCartCheckout(w http.ResponseWriter, r *http.Request) 
 	cart.HandleCartCheckout(s.db, s.stripeSecret, w, r)
 }
 
-// DebugHandler provides debug information
+// DebugHandler handles GET /debug
 func (s *HTTPServer) DebugHandler(w http.ResponseWriter, r *http.Request) {
-	info := map[string]interface{}{
-		"service":      "billing-service",
-		"status":       "running",
-		"time":         time.Now().UTC().Format(time.RFC3339),
-		"environment":  os.Getenv("ENVIRONMENT"),
-		"database_url": "configured",
-		"stripe_key":   "configured",
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
