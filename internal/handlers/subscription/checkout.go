@@ -2,12 +2,12 @@ package subscription
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/common"
-	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/stripe/stripe-go/v72"
@@ -83,23 +83,34 @@ func validateSubscriptionCheckoutRequest(req SubscriptionCheckoutRequest) error 
 	return nil
 }
 
-	// Use checkout session builder
-	builder := core.NewCheckoutSessionBuilder(stripeCustomerID, req.UserID, req.SuccessURL, req.CancelURL, "subscription")
-	builder.AddLineItem(req.PriceID, 1)
-
-	checkoutParams := builder.Build(stripe.CheckoutSessionModeSubscription)
-	checkoutParams.AddMetadata("product_id", req.ProductID)
-
-	checkoutSession, err := checkoutsession.New(checkoutParams)
-	if err != nil {
-		log.Printf("Failed to create Stripe checkout session for user %s: %v", req.UserID, err)
-		http.Error(w, "Failed to create checkout session", http.StatusInternalServerError)
-		return
+// createSubscriptionCheckoutSession creates a Stripe checkout session for a subscription
+func createSubscriptionCheckoutSession(req SubscriptionCheckoutRequest, stripeCustomerID string) (*stripe.CheckoutSession, error) {
+	checkoutParams := &stripe.CheckoutSessionParams{
+		Customer: stripe.String(stripeCustomerID),
+		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(req.PriceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		SuccessURL:               stripe.String(req.SuccessURL),
+		CancelURL:                stripe.String(req.CancelURL),
+		ClientReferenceID:        stripe.String(req.UserID),
+		AllowPromotionCodes:      stripe.Bool(true),
+		BillingAddressCollection: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionRequired)),
 	}
 
-	log.Printf("Created Stripe checkout session: %s for user: %s", checkoutSession.ID, req.UserID)
+	// Add metadata
+	checkoutParams.AddMetadata("user_id", req.UserID)
+	checkoutParams.AddMetadata("product_id", req.ProductID)
+	checkoutParams.AddMetadata("payment_type", "subscription")
 
-	// Return response
+	return checkoutsession.New(checkoutParams)
+}
+
+// writeSubscriptionCheckoutResponse writes the response for subscription checkout
+func writeSubscriptionCheckoutResponse(w http.ResponseWriter, checkoutSession *stripe.CheckoutSession) {
 	response := struct {
 		CheckoutSessionID string `json:"checkout_session_id"`
 		CheckoutURL       string `json:"checkout_url"`
@@ -113,7 +124,6 @@ func validateSubscriptionCheckoutRequest(req SubscriptionCheckoutRequest) error 
 		log.Printf("Error encoding response for subscription checkout: %v", err)
 		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "ENCODING_FAILED",
 			"Failed to encode response", "An unexpected error occurred while preparing the response.", "", "", "")
-		return
 	}
 }
 
