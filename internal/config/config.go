@@ -16,6 +16,9 @@ type Config struct {
 	StripeSecretKey     string
 	StripeWebhookSecret string
 
+	// API Key for authentication
+	APIKey string
+
 	// Server Configuration
 	HTTPPort int
 
@@ -28,14 +31,17 @@ func LoadConfig() (*Config, error) {
 	cfg := &Config{
 		// Database
 		DatabaseURL: getEnvOrError("DATABASE_URL"),
-		
+
 		// Stripe
 		StripeSecretKey:     getEnvOrError("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: getEnvOrError("STRIPE_WEBHOOK_SECRET"),
-		
+
+		// API Key
+		APIKey: getEnvOrError("API_KEY"),
+
 		// Ports
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
-		
+
 		// Logging
 		LogLevel: getEnvOrError("LOG_LEVEL"),
 	}
@@ -63,24 +69,24 @@ func getEnvAsInt(key string, defaultValue int) int {
 	if value == "" {
 		return defaultValue
 	}
-	
+
 	intValue, err := strconv.Atoi(value)
 	if err != nil {
 		log.Printf("Warning: Invalid integer value for %s, using default: %d", key, defaultValue)
 		return defaultValue
 	}
-	
+
 	return intValue
 }
 
 // GetDatabasePoolConfig returns pgx pool configuration
 func (c *Config) GetDatabasePoolConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"connString":          c.DatabaseURL,
-		"minConns":            5,
-		"maxConns":            25,
-		"maxConnLifetime":     time.Hour,
-		"maxConnIdleTime":     time.Minute * 30,
-		"healthCheckPeriod":   time.Minute * 5,
+		"connString":        c.DatabaseURL,
+		"minConns":          5,
+		"maxConns":          25,
+		"maxConnLifetime":   time.Hour,
+		"maxConnIdleTime":   time.Minute * 30,
+		"healthCheckPeriod": time.Minute * 5,
 	}
 }
