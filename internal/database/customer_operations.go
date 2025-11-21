@@ -38,7 +38,8 @@ func (r *Repository) FindOrCreateStripeCustomer(ctx context.Context, projectID u
 		return "", err
 	}
 
-	return "", nil
+	// Return the UUID of the created customer as a string
+	return customerID.String(), nil
 }
 
 // UpdateCustomerStripeID updates the Stripe customer ID for an existing customer
