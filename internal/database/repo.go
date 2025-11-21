@@ -49,7 +49,8 @@ func (r *Repository) GetSubscriptionStatus(ctx context.Context, projectID uuid.U
 			stripe_subscription_id,
 			customer_id,
 			status,
-			current_period_end
+			current_period_end,
+			TRUE as exists
 		FROM subscriptions 
 		WHERE project_id = $1 AND user_id = $2 AND product_id = $3
 	`, projectID, userID, productID)
