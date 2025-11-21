@@ -217,9 +217,11 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
 <h1>🔐 Payment Microservice API</h1>
 
 <div class="header-auth">
-<strong>Authentication Required:</strong> All <code>/api/v1/*</code> endpoints require the <code>X-API-Key</code> header.
+<strong>Authentication Required:</strong> All <code>/api/v1/*</code> endpoints require authentication.
 <br><br>
-<code>X-API-Key: &lt;value from your PAYMENT_MS_API_KEY env variable&gt;</code>
+<strong>Header:</strong> <code>X-API-Key</code><br>
+<strong>Value:</strong> The value from your <code>PAYMENT_MS_API_KEY</code> environment variable<br><br>
+<strong>Example:</strong> <code>X-API-Key: sqtFIdPyZrG/kEoj2lbbF1eOnCNhzjdEWzyptBRYn7A=</code>
 </div>
 
 <h2>Public Endpoints</h2>
