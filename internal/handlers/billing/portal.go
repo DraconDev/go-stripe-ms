@@ -9,6 +9,7 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/billingportal/session"
 )
 
 // HandleCustomerPortal handles POST /api/v1/portal
@@ -61,14 +62,14 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 		ReturnURL: stripe.String(req.ReturnURL),
 	}
 
-	portalSession, err := billingportalsession.New(portalParams)
+	s, err := session.New(portalParams)
 	if err != nil {
-		log.Printf("Failed to create Stripe portal session for customer %s: %v", customer.StripeCustomerID, err)
+		log.Printf("Failed to create portal session: %v", err)
 		http.Error(w, "Failed to create portal session", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Created Stripe portal session: %s for user: %s", portalSession.ID, req.UserID)
+	log.Printf("Created Stripe portal session: %s for user: %s", s.ID, req.UserID)
 
 	response := struct {
 		PortalSessionID string `json:"portal_session_id"`
