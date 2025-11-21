@@ -118,29 +118,7 @@ func (td *TestDatabase) CreateTestCustomer(customer *Customer) error {
 
 // CreateTestSubscription creates a test subscription in the database
 func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error {
-	// First ensure customer exists
-	customer := &Customer{
-		ProjectID:        subscription.ProjectID,
-		UserID:           subscription.UserID,
-		Email:            "test@example.com",
-		StripeCustomerID: "cus_test123",
-		CreatedAt:        subscription.CreatedAt,
-		UpdatedAt:        subscription.UpdatedAt,
-	}
-	if err := td.CreateTestCustomer(customer); err != nil {
-		return fmt.Errorf("failed to create test customer: %w", err)
-	}
-
-	// Get customer ID
-	var customerID string
-	err := td.Conn.QueryRow(td.ctx, `
-		SELECT id::text FROM customers WHERE project_id = $1 AND user_id = $2
-	`, subscription.ProjectID, subscription.UserID).Scan(&customerID)
-	if err != nil {
-		return err
-	}
-
-	_, err = td.Conn.Exec(td.ctx, `
+	_, err := td.Conn.Exec(td.ctx, `
 		INSERT INTO subscriptions (
 			project_id, customer_id, user_id, product_id, price_id,
 			stripe_subscription_id, status, current_period_start, current_period_end,
@@ -150,15 +128,14 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 		)
 		ON CONFLICT (project_id, user_id, product_id) DO UPDATE SET
 			stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+			customer_id = EXCLUDED.customer_id,
 			status = EXCLUDED.status,
 			current_period_start = EXCLUDED.current_period_start,
 			current_period_end = EXCLUDED.current_period_end,
 			updated_at = EXCLUDED.updated_at
-	`, subscription.ProjectID, customerID, subscription.UserID, subscription.ProductID, subscription.PriceID,
-		subscription.StripeSubscriptionID, subscription.Status,
-		subscription.CurrentPeriodStart, subscription.CurrentPeriodEnd,
+	`, subscription.ProjectID, subscription.CustomerID, subscription.UserID, subscription.ProductID, subscription.PriceID,
+		subscription.StripeSubscriptionID, subscription.Status, subscription.CurrentPeriodStart, subscription.CurrentPeriodEnd,
 		subscription.CreatedAt, subscription.UpdatedAt)
-
 	return err
 }
 
