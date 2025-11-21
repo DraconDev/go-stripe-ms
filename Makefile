@@ -70,12 +70,12 @@ run:
 ## Run tests
 test:
 	@echo "Running tests..."
-	$(GOTEST) -v ./...
+	$(GOTEST) -p 1 -v ./...
 
 ## Run tests with coverage
 test-with-coverage:
 	@echo "Running tests with coverage..."
-	$(GOTEST) -v -coverprofile=coverage.out ./...
+	$(GOTEST) -p 1 -v -coverprofile=coverage.out ./...
 	@echo "Coverage report:"
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 
