@@ -7,15 +7,9 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/stripe/stripe-go/v72"
-	billingportalsession "github.com/stripe/stripe-go/v72/billingportal/session"
 )
-
-// CustomerPortalRequest represents the request for creating a customer portal session
-type CustomerPortalRequest struct {
-	UserID    string `json:"user_id"`
-	ReturnURL string `json:"return_url"`
-}
 
 // HandleCustomerPortal handles POST /api/v1/portal
 func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
@@ -24,23 +18,32 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 		return
 	}
 
-	var req CustomerPortalRequest
+	var req struct {
+		UserID    string `json:"user_id"`
+		ReturnURL string `json:"return_url"`
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request: %v", err)
+		log.Printf("Error decoding portal request: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Validate required fields
 	if req.UserID == "" || req.ReturnURL == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		http.Error(w, "Missing user_id or return_url", http.StatusBadRequest)
+		return
+	}
+
+	projectID, ok := middleware.GetProjectID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	log.Printf("HandleCustomerPortal called for user: %s", req.UserID)
 
-	// Get user's Stripe customer ID
-	customer, err := db.GetCustomerByUserID(r.Context(), req.UserID)
+	// Get customer from database
+	customer, err := db.GetCustomerByUserID(r.Context(), projectID, req.UserID)
 	if err != nil {
 		log.Printf("Failed to get customer for user %s: %v", req.UserID, err)
 		http.Error(w, "Customer not found", http.StatusNotFound)
