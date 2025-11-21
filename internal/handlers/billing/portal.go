@@ -15,7 +15,7 @@ import (
 // HandleCustomerPortal handles POST /api/v1/portal
 func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		utils.WriteErrorResponse(w, http.StatusMethodNotAllowed, "method_not_allowed", "METHOD_NOT_ALLOWED", "Method not allowed", "Only POST method is allowed", "", "", "")
 		return
 	}
 
@@ -26,18 +26,18 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Error decoding portal request: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "INVALID_BODY", "Invalid request body", "Failed to decode JSON body", "", "", "")
 		return
 	}
 
 	if req.UserID == "" || req.ReturnURL == "" {
-		http.Error(w, "Missing user_id or return_url", http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "MISSING_FIELDS", "Missing user_id or return_url", "Both user_id and return_url are required", "", "", "")
 		return
 	}
 
 	projectID, ok := middleware.GetProjectID(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		utils.WriteErrorResponse(w, http.StatusUnauthorized, "authentication_error", "UNAUTHORIZED", "Unauthorized", "Missing or invalid authentication", "", "", "")
 		return
 	}
 
@@ -47,12 +47,12 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 	customer, err := db.GetCustomerByUserID(r.Context(), projectID, req.UserID)
 	if err != nil {
 		log.Printf("Failed to get customer for user %s: %v", req.UserID, err)
-		http.Error(w, "Customer not found", http.StatusNotFound)
+		utils.WriteErrorResponse(w, http.StatusNotFound, "not_found", "CUSTOMER_NOT_FOUND", "Customer not found", "The specified customer could not be found", "user_id", "", "")
 		return
 	}
 
 	if customer.StripeCustomerID == "" {
-		http.Error(w, "Customer has no Stripe customer ID", http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "NO_STRIPE_CUSTOMER", "Customer has no Stripe customer ID", "The customer does not have a linked Stripe account", "user_id", "", "")
 		return
 	}
 
@@ -65,7 +65,7 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 	portalSession, err := session.New(portalParams)
 	if err != nil {
 		log.Printf("Failed to create portal session: %v", err)
-		http.Error(w, "Failed to create portal session", http.StatusInternalServerError)
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "api_error", "STRIPE_ERROR", "Failed to create portal session", err.Error(), "", "", "")
 		return
 	}
 
