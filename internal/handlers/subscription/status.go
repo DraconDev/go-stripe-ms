@@ -9,6 +9,7 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils" // Kept for helper functions
+
 	// Added, though not directly used in this snippet, it's in the provided import block
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 	"github.com/jackc/pgx/v5"         // Added for pgx.ErrNoRows check
@@ -21,7 +22,7 @@ func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret stri
 	// Parse URL path to extract user_id and product_id
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 { // e.g., "api/v1/subscriptions/user_id/product_id" -> 5 parts
-		http.Error(w, "Invalid URL format", http.StatusBadRequest)
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "INVALID_URL", "Invalid URL format", "URL must be in format /api/v1/subscriptions/{user_id}/{product_id}", "", "", "")
 		return
 	}
 
@@ -33,7 +34,7 @@ func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret stri
 	// Get projectID from context
 	projectID, ok := middleware.GetProjectID(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		utils.WriteErrorResponse(w, http.StatusUnauthorized, "authentication_error", "UNAUTHORIZED", "Unauthorized", "Missing or invalid authentication", "", "", "")
 		return
 	}
 
@@ -55,7 +56,7 @@ func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret stri
 		}
 		// For other errors, return 500
 		log.Printf("Failed to get subscription status for user %s, product %s: %v", userID, productID, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "api_error", "DATABASE_ERROR", "Internal server error", "Failed to retrieve subscription status", "", "", "")
 		return
 	}
 
