@@ -54,6 +54,14 @@ func NewTestDatabase(t *testing.T) *TestDatabase {
 func (td *TestDatabase) Setup(t *testing.T) {
 	t.Helper()
 
+	// Clean up any leftover test data first
+	_, err := td.Conn.Exec(td.ctx, `
+		TRUNCATE TABLE subscriptions, customers, projects CASCADE;
+	`)
+	if err != nil {
+		t.Logf("Warning: failed to clean up existing data: %v", err)
+	}
+
 	// Initialize database tables
 	if err := td.Repo.InitializeTables(td.ctx); err != nil {
 		t.Fatalf("Failed to initialize test database: %v", err)
@@ -156,15 +164,16 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 
 // CreateTestData creates test customers and subscriptions
 func (td *TestDatabase) CreateTestData() (*Project, *Customer, error) {
-	// Use timestamp to ensure uniqueness across parallel test runs
+	// Use timestamp and UUID to ensure uniqueness across parallel test runs
 	timestamp := time.Now().UnixNano()
+	uniqueSuffix := uuid.New().String()[:8]
 
 	// Create test project
 	projectID := uuid.New()
 	project := &Project{
 		ID:        projectID,
 		Name:      fmt.Sprintf("Test Project %d", timestamp),
-		APIKey:    fmt.Sprintf("sk_test_%d_%s", timestamp, uuid.New().String()[:8]),
+		APIKey:    fmt.Sprintf("sk_test_%d_%s", timestamp, uniqueSuffix),
 		IsActive:  true,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -178,9 +187,9 @@ func (td *TestDatabase) CreateTestData() (*Project, *Customer, error) {
 	customer := &Customer{
 		ID:               customerID,
 		ProjectID:        projectID,
-		UserID:           fmt.Sprintf("test_user_%d", timestamp),
-		Email:            fmt.Sprintf("test_%d@example.com", timestamp),
-		StripeCustomerID: fmt.Sprintf("cus_test_%d", timestamp),
+		UserID:           fmt.Sprintf("test_user_%d_%s", timestamp, uniqueSuffix),
+		Email:            fmt.Sprintf("test_%d_%s@example.com", timestamp, uniqueSuffix),
+		StripeCustomerID: fmt.Sprintf("cus_test_%d_%s", timestamp, uniqueSuffix),
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
@@ -194,7 +203,7 @@ func (td *TestDatabase) CreateTestData() (*Project, *Customer, error) {
 		ProjectID:            projectID,
 		CustomerID:           customerID,
 		UserID:               customer.UserID,
-		StripeSubscriptionID: fmt.Sprintf("sub_test_%d", timestamp),
+		StripeSubscriptionID: fmt.Sprintf("sub_test_%d_%s", timestamp, uniqueSuffix),
 		ProductID:            "premium_plan",
 		PriceID:              "price_123",
 		Status:               "active",
