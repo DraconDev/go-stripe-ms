@@ -62,7 +62,7 @@ func HandleCustomerPortal(db database.RepositoryInterface, stripeSecret string, 
 		ReturnURL: stripe.String(req.ReturnURL),
 	}
 
-	s, err := session.New(portalParams)
+	portalSession, err := session.New(portalParams)
 	if err != nil {
 		log.Printf("Failed to create portal session: %v", err)
 		http.Error(w, "Failed to create portal session", http.StatusInternalServerError)
