@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -166,7 +167,7 @@ func (td *TestDatabase) CreateTestData() (*Project, *Customer, error) {
 		ProjectID:        projectID,
 		UserID:           fmt.Sprintf("test_user_%d_%s", timestamp, uniqueSuffix),
 		Email:            fmt.Sprintf("test_%d_%s@example.com", timestamp, uniqueSuffix),
-		StripeCustomerID: fmt.Sprintf("cus_test_%d_%s", timestamp, uniqueSuffix),
+		StripeCustomerID: config.TestCustomerID, // Use REAL test customer from Stripe
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
