@@ -106,11 +106,11 @@ func ScanSubscription(row pgx.Row) (*Subscription, error) {
 
 // ScanSubscriptionStatus scans a database row into subscription status fields
 func ScanSubscriptionStatus(row pgx.Row) (string, string, time.Time, bool, error) {
-	var stripeSubID, customerID, status sqlString
+	var stripeSubID, customerID sqlString
 	var currentPeriodEnd sqlTime
 	var exists sqlBool
 
-	err := row.Scan(&stripeSubID, &customerID, &status, &currentPeriodEnd, &exists)
+	err := row.Scan(&stripeSubID, &customerID, &currentPeriodEnd, &exists)
 	if err != nil {
 		return "", "", time.Time{}, false, err
 	}

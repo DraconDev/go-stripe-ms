@@ -48,7 +48,6 @@ func (r *Repository) GetSubscriptionStatus(ctx context.Context, projectID uuid.U
 		SELECT 
 			stripe_subscription_id,
 			customer_id,
-			status,
 			current_period_end,
 			TRUE as exists
 		FROM subscriptions 
