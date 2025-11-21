@@ -65,14 +65,25 @@ func TestCreateSubscriptionCheckoutIntegration(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Use the actual customer UserID from test data for valid requests
+				if tt.setupAuth {
+					if userID, ok := tt.requestBody["user_id"].(string); !ok || userID == "test_user_123" {
+						tt.requestBody["user_id"] = customer.UserID
+					}
+				}
+
 				// Create request
 				bodyBytes, _ := json.Marshal(tt.requestBody)
-				req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout",
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/checkout/subscription",
 					bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
 
-				// Inject project ID into context
+				// Inject project context
 				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
+				req = req.WithContext(ctx)
+
+				// Inject project ID into context
+				ctx = context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
 				req = req.WithContext(ctx)
 
 				// Execute
