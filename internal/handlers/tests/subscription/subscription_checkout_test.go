@@ -97,12 +97,30 @@ func TestCreateSubscriptionCheckoutIntegration(t *testing.T) {
 				}
 
 				if tt.expectedError != "" {
-					var errorResponse map[string]string
+					var errorResponse map[string]interface{}
 					if err := json.Unmarshal(w.Body.Bytes(), &errorResponse); err != nil {
 						t.Errorf("Failed to unmarshal error response: %v", err)
-					} else if errorResponse["error"] != tt.expectedError {
-						t.Errorf("Expected error '%s', got '%s'",
-							tt.expectedError, errorResponse["error"])
+					} else {
+						// Check nested error object
+						if errObj, ok := errorResponse["error"].(map[string]interface{}); ok {
+							if msg, ok := errObj["message"].(string); ok {
+								if msg != tt.expectedError {
+									t.Errorf("Expected error message '%s', got '%s'",
+										tt.expectedError, msg)
+								}
+							} else {
+								t.Errorf("Error response missing 'message' field")
+							}
+						} else {
+							// Fallback if error is just a string
+							if errMsg, ok := errorResponse["error"].(string); ok {
+								if errMsg != tt.expectedError {
+									t.Errorf("Expected error '%s', got '%s'", tt.expectedError, errMsg)
+								}
+							} else {
+								t.Errorf("Unexpected error format")
+							}
+						}
 					}
 				}
 

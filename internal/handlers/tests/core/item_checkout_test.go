@@ -130,12 +130,13 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 								t.Errorf("Error response missing 'message' field")
 							}
 						} else {
-							// Fallback for simple error strings if any (though our API uses structured errors)
-							// or if the test expectation was simplified.
-							// Let's assume strict structure check based on API_REQUESTS.md
-							// But for now, let's just check if the error string is contained in the response body for simplicity if structure fails
-							if !bytes.Contains(w.Body.Bytes(), []byte(tt.expectedError)) {
-								t.Errorf("Expected error '%s' in response body", tt.expectedError)
+							// Fallback if error is just a string
+							if errMsg, ok := errorResponse["error"].(string); ok {
+								if errMsg != tt.expectedError {
+									t.Errorf("Expected error '%s', got '%s'", tt.expectedError, errMsg)
+								}
+							} else {
+								t.Errorf("Unexpected error format")
 							}
 						}
 					}
