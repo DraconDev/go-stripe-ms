@@ -24,7 +24,7 @@ type Customer struct {
 	ProjectID        uuid.UUID `json:"project_id"`
 	UserID           string    `json:"user_id"`
 	Email            string    `json:"email"`
-	StripeCustomerID *string   `json:"stripe_customer_id"` // Nullable - populated when Stripe customer is created
+	StripeCustomerID string    `json:"stripe_customer_id"` // May be empty until Stripe customer is created
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
