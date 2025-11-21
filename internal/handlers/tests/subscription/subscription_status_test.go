@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -8,13 +9,15 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 )
 
 // TestGetSubscriptionStatusIntegration tests subscription status retrieval with real database
 func TestGetSubscriptionStatusIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		if err := testDB.CreateTestData(); err != nil {
+		project, err := testDB.CreateTestData()
+		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
 
@@ -53,6 +56,10 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				// Create request
 				req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+
+				// Inject project ID into context
+				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)
+				req = req.WithContext(ctx)
 
 				// Execute
 				w := httptest.NewRecorder()
