@@ -1,4 +1,4 @@
-package utility
+package documentation
 
 import (
 	"encoding/json"
