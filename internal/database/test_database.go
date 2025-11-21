@@ -162,7 +162,9 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	}
 
 	// Create test customer
+	customerID := uuid.New()
 	customer := &Customer{
+		ID:               customerID,
 		ProjectID:        projectID,
 		UserID:           "test_user_123",
 		Email:            "test@example.com",
@@ -178,8 +180,8 @@ func (td *TestDatabase) CreateTestData() (*Project, error) {
 	// Create test subscription
 	subscription := &Subscription{
 		ProjectID:            projectID,
+		CustomerID:           customerID,
 		UserID:               "test_user_123",
-		StripeCustomerID:     customer.StripeCustomerID,
 		StripeSubscriptionID: "sub_test_" + uuid.New().String(),
 		ProductID:            "premium_plan",
 		PriceID:              "price_123",
