@@ -129,7 +129,9 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 			}
 
 			now := time.Now()
-			err = testDB.Repo.CreateSubscription(ctx, projectID, customer3.ID.String(), stripeSubID,
+			// Use a different subscription ID to avoid conflicts
+			stripeSubID2 := fmt.Sprintf("sub_test_%d_2", timestamp)
+			err = testDB.Repo.CreateSubscription(ctx, projectID, customer3.ID.String(), stripeSubID2,
 				"enterprise_plan", "price_999", testUserID3, "active", now, now.AddDate(0, 0, 30))
 			if err != nil {
 				t.Fatalf("Failed to create subscription: %v", err)
@@ -137,7 +139,7 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 
 			// Update subscription status
 			newPeriodEnd := now.AddDate(0, 1, 0)
-			err = testDB.Repo.UpdateSubscriptionStatus(ctx, stripeSubID, "canceled", newPeriodEnd)
+			err = testDB.Repo.UpdateSubscriptionStatus(ctx, stripeSubID2, "canceled", newPeriodEnd)
 			if err != nil {
 				t.Fatalf("Failed to update subscription status: %v", err)
 			}
