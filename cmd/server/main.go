@@ -114,17 +114,12 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	s.webhookHandler.SetupRoutes(mux)
 
 	// Protected API endpoints (require X-API-Key header)
-	// Wrap each handler with the middleware
-	mux.Handle("POST /api/v1/checkout/subscription",
-		apiKeyAuth.Middleware(http.HandlerFunc(s.apiServer.CreateSubscriptionCheckout)))
-	mux.Handle("POST /api/v1/checkout/item",
-		apiKeyAuth.Middleware(http.HandlerFunc(s.apiServer.CreateItemCheckout)))
-	mux.Handle("POST /api/v1/checkout/cart",
-		apiKeyAuth.Middleware(http.HandlerFunc(s.apiServer.CreateCartCheckout)))
-	mux.Handle("GET /api/v1/subscriptions/{user_id}/{product_id}",
-		apiKeyAuth.Middleware(http.HandlerFunc(s.apiServer.GetSubscriptionStatus)))
-	mux.Handle("POST /api/v1/portal",
-		apiKeyAuth.Middleware(http.HandlerFunc(s.apiServer.CreateCustomerPortal)))
+	// Protected endpoints (require API key)
+	mux.Handle("/api/v1/checkout/item", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.HandleItemCheckout)))
+	mux.Handle("/api/v1/checkout/cart", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.HandleCartCheckout)))
+	mux.Handle("/api/v1/checkout/subscription", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.HandleSubscriptionCheckout)))
+	mux.Handle("/api/v1/subscription/status", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.HandleSubscriptionStatus)))
+	mux.Handle("/api/v1/portal", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.HandleCustomerPortal)))
 
 	// Debug endpoint (development only)
 	env := os.Getenv("ENVIRONMENT")
