@@ -1,7 +1,9 @@
-package core
+```go
+package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,13 +11,15 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
 )
 
-// TestCreateItemCheckoutIntegration tests the item checkout endpoint with a real database
+// TestCreateItemCheckoutIntegration tests with real database
 func TestCreateItemCheckoutIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		if err := testDB.CreateTestData(); err != nil {
+		project, err := testDB.CreateTestData()
+		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
 
@@ -34,6 +38,7 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 				requestBody: map[string]interface{}{
 					"user_id":     "test_user_123",
 					"email":       "test@example.com",
+					"product_id":  "prod_test123",
 					"price_id":    "price_test123",
 					"quantity":    1,
 					"success_url": "https://example.com/success",
@@ -64,6 +69,18 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 				},
 				expectedStatusCode: http.StatusBadRequest,
 				expectedError:      "Missing required fields",
+			},
+			{
+				name: "Missing required field",
+				requestBody: map[string]interface{}{
+					"email":       "test@example.com",
+					"product_id":  "prod_test123",
+					"price_id":    "price_test123",
+					"success_url": "https://example.com/success",
+					"cancel_url":  "https://example.com/cancel",
+				},
+				expectedStatusCode: http.StatusBadRequest,
+				expectedError:      "missing required fields",
 			},
 			{
 				name: "Invalid quantity (0)",
