@@ -1,19 +1,20 @@
 # API Key Authentication
 
-This Payment MS uses API key authentication to secure access to payment endpoints.
+This Payment MS uses API key authentication to secure access to payment endpoints. The API key is stored in your `.env` file and validated on every request.
 
 ## Quick Start
 
-### Your API Key
-```
-proj_prkwlS4ipOUYKKekMv9kvPwPa6dun6Rt-6Uuwal31Gs
+### 1. Set Your API Key
+Add to your `.env` file:
+```bash
+API_KEY=your_api_key_here
 ```
 
-### Usage
+### 2. Use in Requests
 Include the `X-API-Key` header in all API requests:
 
 ```bash
-curl -H "X-API-Key: proj_prkwlS4ipOUYKKekMv9kvPwPa6dun6Rt-6Uuwal31Gs" \
+curl -H "X-API-Key: your_api_key_here" \
   http://localhost:9000/api/v1/subscriptions/user_123/prod_123
 ```
 
@@ -22,7 +23,7 @@ curl -H "X-API-Key: proj_prkwlS4ipOUYKKekMv9kvPwPa6dun6Rt-6Uuwal31Gs" \
 fetch('http://localhost:9000/api/v1/checkout/subscription', {
   method: 'POST',
   headers: {
-    'X-API-Key': 'proj_prkwlS4ipOUYKKekMv9kvPwPa6dun6Rt-6Uuwal31Gs',
+    'X-API-Key': process.env.API_KEY,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -51,40 +52,86 @@ These endpoints do NOT require authentication:
 - `GET /health` - Health check
 - `POST /webhooks/stripe` - Stripe webhooks (authenticated by Stripe signature)
 
-## Creating New Projects
+## Testing
 
-To create additional projects with separate API keys:
-
+Run the automated test script:
 ```bash
-go run ./cmd/create-project "Project Name"
+./scripts/test-api-key.sh
 ```
 
-This will generate a new API key for the project.
+This will test:
+- ✅ Public endpoints work without auth
+- ❌ Requests without API key are blocked
+- ❌ Requests with wrong API key are blocked
+- ✅ Requests with valid API key pass through
+
+## Generating a New API Key
+
+You can generate a secure random API key using:
+```bash
+openssl rand -base64 32
+```
+
+Or use the migration script which generates one automatically:
+```bash
+go run ./cmd/migrate
+```
 
 ## Security Notes
 
-- **Never commit API keys to version control**
+- **Never commit API keys to version control** - `.env` is in `.gitignore`
 - Store API keys in environment variables or secrets management
 - Use HTTPS in production to protect API keys in transit
 - Rotate API keys periodically for enhanced security
+- Use different API keys for different environments (dev, staging, prod)
 
 ## Troubleshooting
 
 ### Error: "Missing X-API-Key header"
 You forgot to include the `X-API-Key` header in your request.
 
-### Error: "Invalid API key format"
-The API key must start with `proj_` and be 48 characters total.
-
-### Error: "Invalid API key"
-The API key is not found in the database or the project is inactive.
-
-## Migration
-
-If you're migrating from a version without API key authentication, run:
-
+**Fix:**
 ```bash
-go run ./cmd/migrate
+curl -H "X-API-Key: YOUR_KEY" http://localhost:9000/api/...
 ```
 
-This will create the projects table and generate your first API key.
+### Error: "Invalid API key"
+The API key in your request doesn't match the one in `.env`.
+
+**Fix:**
+1. Check your `.env` file for the correct API_KEY value
+2. Ensure you're using the same key in your request
+3. Restart the server after changing `.env`
+
+### Error: "Required environment variable API_KEY is not set"
+The server can't find the API_KEY in your environment.
+
+**Fix:**
+1. Add `API_KEY=your_key_here` to your `.env` file
+2. Restart the server
+
+## Production Deployment
+
+### Environment Variables
+Set the API_KEY in your production environment:
+
+**Heroku:**
+```bash
+heroku config:set API_KEY=your_production_key
+```
+
+**Docker:**
+```bash
+docker run -e API_KEY=your_production_key ...
+```
+
+**AWS/GCP:**
+Use their secrets management services (AWS Secrets Manager, GCP Secret Manager)
+
+### Key Rotation
+To rotate your API key:
+1. Generate a new key
+2. Update `.env` or environment variable
+3. Restart the server
+4. Update all client applications with the new key
+
