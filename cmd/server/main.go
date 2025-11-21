@@ -99,8 +99,8 @@ func (s *Server) StartHTTPServer() error {
 
 // setupAPIRoutes sets up all HTTP routes for the billing API
 func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
-	// Create API key middleware
-	apiKeyAuth := middleware.NewAPIKeyAuth(s.config.APIKey)
+	// Initialize middleware
+	authMiddleware := middleware.NewAPIKeyAuth(s.db)
 
 	// Public endpoints (no authentication required)
 	mux.HandleFunc("/", s.apiServer.RootHandler)
