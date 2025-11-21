@@ -134,8 +134,58 @@ func HandleOpenAPI(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/api/v1/checkout/item": map[string]interface{}{"post": map[string]string{"summary": "Create item checkout"}},
-			"/api/v1/checkout/cart": map[string]interface{}{"post": map[string]string{"summary": "Create cart checkout"}},
+			"/api/v1/checkout/item": map[string]interface{}{
+				"post": map[string]interface{}{
+					"summary":     "Create item checkout",
+					"description": "Creates a Stripe checkout session for a single item",
+					"requestBody": map[string]interface{}{
+						"required": true,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": map[string]string{"$ref": "#/components/schemas/ItemCheckoutRequest"},
+							},
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Item checkout session created",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]string{"$ref": "#/components/schemas/CheckoutResponse"},
+								},
+							},
+						},
+						"401": map[string]interface{}{"description": "Missing or invalid API key"},
+						"400": map[string]interface{}{"description": "Invalid request body"},
+					},
+				},
+			},
+			"/api/v1/checkout/cart": map[string]interface{}{
+				"post": map[string]interface{}{
+					"summary":     "Create cart checkout",
+					"description": "Creates a Stripe checkout session for multiple items (shopping cart)",
+					"requestBody": map[string]interface{}{
+						"required": true,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": map[string]string{"$ref": "#/components/schemas/CartCheckoutRequest"},
+							},
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Cart checkout session created",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]string{"$ref": "#/components/schemas/CheckoutResponse"},
+								},
+							},
+						},
+						"401": map[string]interface{}{"description": "Missing or invalid API key"},
+						"400": map[string]interface{}{"description": "Invalid request body"},
+					},
+				},
+			},
 			"/api/v1/subscriptions/{user_id}/{product_id}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"summary":     "Get subscription status",
