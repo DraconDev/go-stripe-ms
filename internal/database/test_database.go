@@ -21,12 +21,12 @@ type TestDatabase struct {
 // NewTestDatabase creates a new test database connection
 func NewTestDatabase(t *testing.T) *TestDatabase {
 	t.Helper()
-	
+
 	ctx := context.Background()
-	
+
 	// Automatically load environment variables
 	autoLoadEnv()
-	
+
 	// Get database connection string
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
@@ -52,36 +52,36 @@ func NewTestDatabase(t *testing.T) *TestDatabase {
 // Setup creates tables and initializes the test database
 func (td *TestDatabase) Setup(t *testing.T) {
 	t.Helper()
-	
+
 	// Initialize database tables
 	if err := td.Repo.InitializeTables(td.ctx); err != nil {
 		t.Fatalf("Failed to initialize test database: %v", err)
 	}
-	
+
 	log.Println("Test database setup completed")
 }
 
 // Cleanup closes connections
 func (td *TestDatabase) Cleanup(t *testing.T) {
 	t.Helper()
-	
+
 	if td.Conn != nil {
 		td.Conn.Close(td.ctx)
 	}
-	
+
 	log.Println("Test database cleanup completed")
 }
 
 // CreateTestCustomer creates a test customer in the database
 func (td *TestDatabase) CreateTestCustomer(customer *Customer) error {
 	_, err := td.Conn.Exec(td.ctx, `
-		INSERT INTO customers (user_id, email, stripe_customer_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id) DO UPDATE SET
+		INSERT INTO customers (project_id, user_id, email, stripe_customer_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (project_id, user_id) DO UPDATE SET
 			email = EXCLUDED.email,
 			stripe_customer_id = EXCLUDED.stripe_customer_id,
 			updated_at = EXCLUDED.updated_at
-	`, customer.UserID, customer.Email, customer.StripeCustomerID, customer.CreatedAt, customer.UpdatedAt)
+	`, customer.ProjectID, customer.UserID, customer.Email, customer.StripeCustomerID, customer.CreatedAt, customer.UpdatedAt)
 	return err
 }
 
@@ -126,13 +126,9 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 		subscription.StripeSubscriptionID, subscription.Status,
 		subscription.CurrentPeriodStart, subscription.CurrentPeriodEnd,
 		subscription.CreatedAt, subscription.UpdatedAt)
-	
+
 	return err
 }
-
-
-
-
 
 // CreateTestData creates test customers and subscriptions
 func (td *TestDatabase) CreateTestData() error {
@@ -144,11 +140,11 @@ func (td *TestDatabase) CreateTestData() error {
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
 	}
-	
+
 	if err := td.CreateTestCustomer(customer); err != nil {
 		return err
 	}
-	
+
 	// Create test subscription
 	subscription := &Subscription{
 		UserID:               "test_user_123",
@@ -161,6 +157,6 @@ func (td *TestDatabase) CreateTestData() error {
 		CreatedAt:            time.Now(),
 		UpdatedAt:            time.Now(),
 	}
-	
+
 	return td.CreateTestSubscription(subscription)
 }
