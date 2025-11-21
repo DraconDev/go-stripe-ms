@@ -199,10 +199,14 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Print configuration (remove sensitive data)
+	log.Println("========================================")
 	log.Printf("Configuration loaded:")
 	log.Printf("  HTTP Port: %d", cfg.HTTPPort)
-	log.Printf("  Environment: %s", getEnvironment())
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = "development"
+	}
+	log.Printf("  Environment: %s", env)
 	log.Printf("  Log Level: %s", cfg.LogLevel)
 
 	// Create and run server
