@@ -41,6 +41,8 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 				name: "Valid item checkout request",
 				requestBody: map[string]interface{}{
 					"price_id":    config.TEST_PRICE_ID, // Use real test price from constants
+					"product_id":  "prod_test123",
+					"email":       "test@example.com",
 					"quantity":    1,
 					"user_id":     "test_user_123",
 					"success_url": "http://localhost:3000/success",
@@ -52,7 +54,9 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 			{
 				name: "Valid item checkout request with default quantity",
 				requestBody: map[string]interface{}{
-					"price_id": config.TEST_PRICE_ID,
+					"price_id":   config.TEST_PRICE_ID,
+					"product_id": "prod_test123",
+					"email":      "test@example.com",
 					// quantity omitted, should default to 1
 					"success_url": "https://example.com/success",
 					"cancel_url":  "https://example.com/cancel",
