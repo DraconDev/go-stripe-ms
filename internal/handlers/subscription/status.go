@@ -21,7 +21,7 @@ import (
 func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	// Parse URL path to extract user_id and product_id
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 4 { // e.g., "api/v1/subscriptions/user_id/product_id" -> 5 parts
+	if len(pathParts) != 5 { // e.g., "api/v1/subscriptions/user_id/product_id" -> 5 parts
 		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "INVALID_URL", "Invalid URL format", "URL must be in format /api/v1/subscriptions/{user_id}/{product_id}", "", "", "")
 		return
 	}
