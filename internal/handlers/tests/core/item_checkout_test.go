@@ -52,7 +52,7 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 			{
 				name: "Valid item checkout request with default quantity",
 				requestBody: map[string]interface{}{
-					"price_id": "price_test123",
+					"price_id": config.TEST_PRICE_ID,
 					// quantity omitted, should default to 1
 					"success_url": "https://example.com/success",
 					"cancel_url":  "https://example.com/cancel",
@@ -81,7 +81,7 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 					"cancel_url":  "https://example.com/cancel",
 				},
 				expectedStatusCode: http.StatusBadRequest,
-				expectedError:      "missing required fields",
+				expectedError:      "Missing required fields",
 			},
 		}
 
