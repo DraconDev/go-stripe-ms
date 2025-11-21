@@ -1,3 +1,11 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
 // openAPIHandler serves the OpenAPI specification
 func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
 	spec := map[string]interface{}{
