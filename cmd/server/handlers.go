@@ -3,8 +3,40 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"time"
 )
+
+// debugHandler provides debug information
+func (s *Server) debugHandler(w http.ResponseWriter, r *http.Request) {
+	info := map[string]interface{}{
+		"service":      "billing-service",
+		"status":       "running",
+		"time":         time.Now().UTC().Format(time.RFC3339),
+		"environment":  getEnvironment(),
+		"database_url": "configured",
+		"stripe_key":   "configured",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	jsonData, _ := json.Marshal(info)
+	if _, err := w.Write(jsonData); err != nil {
+		log.Printf("Error writing debug response: %v", err)
+	}
+}
+
+// getEnvironment returns the current environment with default
+func getEnvironment() string {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		return "development"
+	}
+	return env
+}
 
 // openAPIHandler serves the OpenAPI specification
 func (s *Server) openAPIHandler(w http.ResponseWriter, r *http.Request) {
