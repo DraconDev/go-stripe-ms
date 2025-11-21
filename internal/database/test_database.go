@@ -146,7 +146,7 @@ func (td *TestDatabase) CreateTestSubscription(subscription *Subscription) error
 }
 
 // CreateTestData creates test customers and subscriptions
-func (td *TestDatabase) CreateTestData() error {
+func (td *TestDatabase) CreateTestData() (*Project, error) {
 	// Create test project
 	projectID := uuid.New()
 	project := &Project{
@@ -158,7 +158,7 @@ func (td *TestDatabase) CreateTestData() error {
 		UpdatedAt: time.Now(),
 	}
 	if err := td.CreateTestProject(project); err != nil {
-		return fmt.Errorf("failed to create test project: %w", err)
+		return nil, fmt.Errorf("failed to create test project: %w", err)
 	}
 
 	// Create test customer
@@ -172,22 +172,27 @@ func (td *TestDatabase) CreateTestData() error {
 	}
 
 	if err := td.CreateTestCustomer(customer); err != nil {
-		return fmt.Errorf("failed to create test customer: %w", err)
+		return nil, fmt.Errorf("failed to create test customer: %w", err)
 	}
 
 	// Create test subscription
 	subscription := &Subscription{
 		ProjectID:            projectID,
 		UserID:               "test_user_123",
-		ProductID:            "premium_plan",
-		PriceID:              "price_test123",
+		StripeCustomerID:     customer.StripeCustomerID,
 		StripeSubscriptionID: "sub_test_" + uuid.New().String(),
+		ProductID:            "premium_plan",
+		PriceID:              "price_123",
 		Status:               "active",
 		CurrentPeriodStart:   time.Now(),
-		CurrentPeriodEnd:     time.Now().AddDate(0, 0, 30),
+		CurrentPeriodEnd:     time.Now().Add(30 * 24 * time.Hour),
 		CreatedAt:            time.Now(),
 		UpdatedAt:            time.Now(),
 	}
 
-	return td.CreateTestSubscription(subscription)
+	if err := td.CreateTestSubscription(subscription); err != nil {
+		return nil, fmt.Errorf("failed to create test subscription: %w", err)
+	}
+
+	return project, nil
 }
