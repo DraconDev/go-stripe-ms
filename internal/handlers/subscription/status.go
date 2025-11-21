@@ -1,4 +1,3 @@
-```go
 package subscription
 
 import (
@@ -22,18 +21,25 @@ func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret stri
 		return
 	}
 
-	if len(parts) != 2 {
-		http.Error(w, "Invalid URL format. Expected /api/v1/subscriptions/{user_id}/{product_id}", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	userID := vars["user_id"]
+	productID := vars["product_id"]
+
+	if userID == "" || productID == "" {
+		http.Error(w, "Missing user_id or product_id", http.StatusBadRequest)
 		return
 	}
 
-	userID = parts[0]
-	productID := parts[1]
+	projectID, ok := middleware.GetProjectID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	log.Printf("HandleSubscriptionStatus called for user: %s, product: %s", userID, productID)
 
 	// Check database for existing subscription
-	stripeSubID, status, currentPeriodEnd, exists, err := db.GetSubscriptionStatus(r.Context(), userID, productID)
+	stripeSubID, status, currentPeriodEnd, exists, err := db.GetSubscriptionStatus(r.Context(), projectID, userID, productID)
 	if err != nil {
 		log.Printf("Failed to get subscription status for user %s, product %s: %v", userID, productID, err)
 		utils.WriteErrorResponse(w, http.StatusInternalServerError, "database_error", "DATABASE_QUERY_FAILED",
