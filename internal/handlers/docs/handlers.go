@@ -72,6 +72,39 @@ func HandleOpenAPI(w http.ResponseWriter, r *http.Request) {
 						"checkout_url":        map[string]interface{}{"type": "string", "format": "uri", "example": "https://checkout.stripe.com/c/pay/cs_test_..."},
 					},
 				},
+				"ItemCheckoutRequest": map[string]interface{}{
+					"type":     "object",
+					"required": []string{"user_id", "email", "price_id", "success_url", "cancel_url"},
+					"properties": map[string]interface{}{
+						"user_id":     map[string]interface{}{"type": "string", "example": "user_123"},
+						"email":       map[string]interface{}{"type": "string", "format": "email", "example": "customer@example.com"},
+						"price_id":    map[string]interface{}{"type": "string", "example": "price_1QhEBSFhH6dwUiIH"},
+						"quantity":    map[string]interface{}{"type": "integer", "default": 1, "example": 1},
+						"success_url": map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/success"},
+						"cancel_url":  map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/cancel"},
+					},
+				},
+				"CartCheckoutRequest": map[string]interface{}{
+					"type":     "object",
+					"required": []string{"user_id", "email", "items", "success_url", "cancel_url"},
+					"properties": map[string]interface{}{
+						"user_id": map[string]interface{}{"type": "string", "example": "user_123"},
+						"email":   map[string]interface{}{"type": "string", "format": "email", "example": "customer@example.com"},
+						"items": map[string]interface{}{
+							"type": "array",
+							"items": map[string]interface{}{
+								"type":     "object",
+								"required": []string{"price_id", "quantity"},
+								"properties": map[string]interface{}{
+									"price_id": map[string]interface{}{"type": "string", "example": "price_ABC"},
+									"quantity": map[string]interface{}{"type": "integer", "example": 2},
+								},
+							},
+						},
+						"success_url": map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/success"},
+						"cancel_url":  map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/cancel"},
+					},
+				},
 				"SubscriptionStatusResponse": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
