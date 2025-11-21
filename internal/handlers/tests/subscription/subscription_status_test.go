@@ -1,3 +1,4 @@
+```go
 package server
 
 import (
@@ -6,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
@@ -23,7 +25,8 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 		}
 
 		// Create HTTP server with real database
-		server := handlers.NewHTTPServer(testDB.Repo, "sk_test_123")
+		stripeKey := os.Getenv("STRIPE_SECRET_KEY")
+		server := handlers.NewHTTPServer(testDB.Repo, stripeKey)
 
 		tests := []struct {
 			name               string
