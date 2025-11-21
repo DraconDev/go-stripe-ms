@@ -221,7 +221,7 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
 <br><br>
 <strong>Header:</strong> <code>X-API-Key</code><br>
 <strong>Value:</strong> The value from your <code>PAYMENT_MS_API_KEY</code> environment variable<br><br>
-<strong>Example:</strong> <code>X-API-Key: sqtFIdPyZrG/kEoj2lbbF1eOnCNhzjdEWzyptBRYn7A=</code>
+<strong>Example:</strong> <code>X-API-Key: your_secret_api_key_here</code>
 </div>
 
 <h2>Public Endpoints</h2>
@@ -300,6 +300,10 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
   "checkout_url": "https://checkout.stripe.com/..."
 }</pre>
 </div>
+<div class="section">
+<div class="section-title">Notes:</div>
+<code>quantity</code> defaults to 1 if not specified. The <code>price_id</code> determines what product/service is being purchased.
+</div>
 </div>
 
 <div class="endpoint">
@@ -321,6 +325,17 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
   "success_url": "https://yourapp.com/success",
   "cancel_url": "https://yourapp.com/cancel"
 }</pre>
+</div>
+<div class="section response">
+<div class="section-title">Response:</div>
+<pre>{
+  "checkout_session_id": "cs_test_...",
+  "checkout_url": "https://checkout.stripe.com/..."
+}</pre>
+</div>
+<div class="section">
+<div class="section-title">Notes:</div>
+Each item in the <code>items</code> array must have a <code>price_id</code> and <code>quantity</code>. Use this for multi-item purchases.
 </div>
 </div>
 
@@ -354,6 +369,10 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
   "product_id": ""
 }</pre>
 </div>
+<div class="section">
+<div class="section-title">Status Values:</div>
+<code>active</code>, <code>canceled</code>, <code>incomplete</code>, <code>incomplete_expired</code>, <code>past_due</code>, <code>trialing</code>, <code>unpaid</code>, <code>none</code>
+</div>
 </div>
 
 <div class="endpoint">
@@ -375,6 +394,10 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
 <pre>{
   "portal_url": "https://billing.stripe.com/p/session/..."
 }</pre>
+</div>
+<div class="section">
+<div class="section-title">Use Case:</div>
+Redirect users to <code>portal_url</code> to let them manage their subscriptions, update payment methods, view invoices, and cancel subscriptions.
 </div>
 </div>
 
