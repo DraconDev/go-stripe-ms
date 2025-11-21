@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# Load API_KEY from .env
+# Load PAYMENT_MS_API_KEY from .env
 if [ -f .env ]; then
-    export $(grep "^API_KEY=" .env | xargs)
+    export $(grep "^PAYMENT_MS_API_KEY=" .env | xargs)
 else
     echo "Error: .env file not found"
     exit 1
 fi
 
-if [ -z "$API_KEY" ]; then
-    echo "Error: API_KEY not found in .env"
+if [ -z "$PAYMENT_MS_API_KEY" ]; then
+    echo "Error: PAYMENT_MS_API_KEY not found in .env"
     exit 1
 fi
 
-echo "🔑 Using API Key: $API_KEY"
+echo "🔑 Using API Key: $PAYMENT_MS_API_KEY"
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "Running API Key Authentication Tests"

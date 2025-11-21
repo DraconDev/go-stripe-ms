@@ -37,7 +37,7 @@ func LoadConfig() (*Config, error) {
 		StripeWebhookSecret: getEnvOrError("STRIPE_WEBHOOK_SECRET"),
 
 		// API Key
-		APIKey: getEnvOrError("API_KEY"),
+		APIKey: getEnvOrError("PAYMENT_MS_API_KEY"),
 
 		// Ports
 		HTTPPort: getEnvAsInt("HTTP_PORT", 8080),
