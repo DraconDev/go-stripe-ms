@@ -53,7 +53,7 @@ func (h *StripeWebhookHandler) handleCustomerSubscriptionCreated(ctx context.Con
 	err = h.db.CreateSubscription(
 		ctx,
 		customer.ProjectID,
-		subscription.Customer.ID,
+		customer.ID.String(),
 		subscription.ID,
 		productID,
 		priceID,
