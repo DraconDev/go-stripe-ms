@@ -7,12 +7,27 @@ import (
 	"time"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/google/uuid"
 )
 
 // TestDatabaseOperationsIntegration tests database operations directly
 func TestDatabaseOperationsIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		ctx := context.Background()
+
+		// Create a test project
+		projectID := uuid.New()
+		project := &database.Project{
+			ID:        projectID,
+			Name:      "Test Project Ops",
+			APIKey:    "sk_test_ops_" + uuid.New().String(),
+			IsActive:  true,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := testDB.CreateTestProject(project); err != nil {
+			t.Fatalf("Failed to create test project: %v", err)
+		}
 
 		// Generate unique identifiers for this test run to avoid conflicts
 		timestamp := time.Now().Unix()
@@ -25,14 +40,14 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 
 		t.Run("FindOrCreateStripeCustomer", func(t *testing.T) {
 			// Test customer creation
-			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx,
+			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx, projectID,
 				testUserID1, fmt.Sprintf("test%d@example.com", timestamp))
 			if err != nil {
 				t.Fatalf("Failed to create customer: %v", err)
 			}
 
 			// Test customer retrieval
-			customer, err := testDB.Repo.GetCustomerByUserID(ctx, testUserID1)
+			customer, err := testDB.Repo.GetCustomerByUserID(ctx, projectID, testUserID1)
 			if err != nil {
 				t.Fatalf("Failed to get customer: %v", err)
 			}
@@ -46,28 +61,28 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 
 		t.Run("CreateSubscription", func(t *testing.T) {
 			// First create a customer
-			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx,
+			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx, projectID,
 				testUserID2, fmt.Sprintf("test%d_2@example.com", timestamp))
 			if err != nil {
 				t.Fatalf("Failed to create customer: %v", err)
 			}
 
 			// Update customer with Stripe ID (simulating the flow)
-			err = testDB.Repo.UpdateCustomerStripeID(ctx, testUserID2, stripeCustomerID1)
+			err = testDB.Repo.UpdateCustomerStripeID(ctx, projectID, testUserID2, stripeCustomerID1)
 			if err != nil {
 				t.Fatalf("Failed to update customer Stripe ID: %v", err)
 			}
 
 			// Create subscription
 			now := time.Now()
-			err = testDB.Repo.CreateSubscription(ctx, stripeCustomerID1, stripeSubID,
+			err = testDB.Repo.CreateSubscription(ctx, projectID, stripeCustomerID1, stripeSubID,
 				"pro_plan", "price_789", testUserID2, "active", now, now.AddDate(0, 0, 30))
 			if err != nil {
 				t.Fatalf("Failed to create subscription: %v", err)
 			}
 
 			// Retrieve subscription
-			stripeSubIDRetrieved, status, _, exists, err := testDB.Repo.GetSubscriptionStatus(ctx,
+			stripeSubIDRetrieved, status, _, exists, err := testDB.Repo.GetSubscriptionStatus(ctx, projectID,
 				testUserID2, "pro_plan")
 			if err != nil {
 				t.Fatalf("Failed to get subscription status: %v", err)
@@ -85,19 +100,19 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 
 		t.Run("UpdateSubscriptionStatus", func(t *testing.T) {
 			// Create customer and subscription first
-			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx,
+			_, err := testDB.Repo.FindOrCreateStripeCustomer(ctx, projectID,
 				testUserID3, fmt.Sprintf("test%d_3@example.com", timestamp))
 			if err != nil {
 				t.Fatalf("Failed to create customer: %v", err)
 			}
 
-			err = testDB.Repo.UpdateCustomerStripeID(ctx, testUserID3, stripeCustomerID2)
+			err = testDB.Repo.UpdateCustomerStripeID(ctx, projectID, testUserID3, stripeCustomerID2)
 			if err != nil {
 				t.Fatalf("Failed to update customer Stripe ID: %v", err)
 			}
 
 			now := time.Now()
-			err = testDB.Repo.CreateSubscription(ctx, stripeCustomerID2, stripeSubID,
+			err = testDB.Repo.CreateSubscription(ctx, projectID, stripeCustomerID2, stripeSubID,
 				"enterprise_plan", "price_999", testUserID3, "active", now, now.AddDate(0, 0, 30))
 			if err != nil {
 				t.Fatalf("Failed to create subscription: %v", err)
@@ -111,7 +126,7 @@ func TestDatabaseOperationsIntegration(t *testing.T) {
 			}
 
 			// Verify update
-			_, status, periodEnd, exists, err := testDB.Repo.GetSubscriptionStatus(ctx,
+			_, status, periodEnd, exists, err := testDB.Repo.GetSubscriptionStatus(ctx, projectID,
 				testUserID3, "enterprise_plan")
 			if err != nil {
 				t.Fatalf("Failed to get subscription status: %v", err)
