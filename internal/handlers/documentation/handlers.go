@@ -1,3 +1,4 @@
+// Package documentation provides handlers for API documentation endpoints
 package documentation
 
 import (
