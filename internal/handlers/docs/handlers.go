@@ -49,7 +49,7 @@ func HandleOpenAPI(w http.ResponseWriter, r *http.Request) {
 					"type":        "apiKey",
 					"in":          "header",
 					"name":        "X-API-Key",
-					"description": "API key for authentication. Get this from your .env file (PAYMENT_MS_API_KEY)",
+					"description": "API key authentication. Header name: 'X-API-Key'. Value: from server's PAYMENT_MS_API_KEY environment variable",
 				},
 			},
 			"schemas": map[string]interface{}{
