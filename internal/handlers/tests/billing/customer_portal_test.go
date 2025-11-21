@@ -54,9 +54,14 @@ func TestCreateCustomerPortalIntegration(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Use the actual customer UserID from test data for valid requests
+				if tt.name == "Valid portal request" {
+					tt.requestBody["user_id"] = customer.UserID
+				}
+
 				// Create request
 				bodyBytes, _ := json.Marshal(tt.requestBody)
-				req := httptest.NewRequest(http.MethodPost, "/api/v1/portal",
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/billing/portal",
 					bytes.NewReader(bodyBytes))
 				req.Header.Set("Content-Type", "application/json")
 
