@@ -17,141 +17,55 @@
 ## 🚀 Production Readiness Checklist
 
 ### 1. Security & Configuration (CRITICAL)
-- [ ] **Environment Variables**: Move all secrets to env vars
-  - `STRIPE_SECRET_KEY` - Never commit to git!
-  - `STRIPE_WEBHOOK_SECRET` - For webhook signature verification
-  - `DATABASE_URL` - Production database connection
-  - `PORT` - Server port (default 8080)
-  - `CORS_ALLOWED_ORIGINS` - Whitelist your frontend domains
+- [x] **Environment Variables**: Secrets moved to env vars (Done)
+- [ ] **API Key Authentication (Universal Access)**:
+  - Implement `X-API-Key` middleware
+  - Create `projects` table (id, name, api_key, webhook_url)
+  - Allow multiple projects to use the service via API Key
+  - **Decision**: No CORS needed (Backend-to-Backend communication preferred)
   
-- [ ] **Stripe Webhook Verification**: Implement signature validation
-  - Currently missing in webhook handler
-  - Prevents unauthorized webhook calls
-  - See: `internal/handlers/webhook.go` (if exists) or create it
+- [ ] **Stripe Webhook Verification**: 
+  - [x] Basic verification
+  - [ ] Support multiple webhook secrets (if projects have different Stripe accounts) OR
+  - [ ] Centralized Stripe Connect approach (Long term goal)
   
 - [ ] **HTTPS/TLS**: 
-  - Production must use HTTPS
-  - Let's Encrypt for free SSL certificates
-  - Or use reverse proxy (nginx/Caddy) with auto-HTTPS
-  
-- [ ] **API Key Authentication** (if needed):
-  - Add middleware for API key validation
-  - Protect sensitive endpoints
-  - Rate limiting per API key
+  - Production must use HTTPS (Cloud provider usually handles this)
 
 ### 2. Database & Data Management
 - [ ] **Database Migrations**: 
-  - Use `golang-migrate` or similar
-  - Version control your schema changes
-  - Currently using `InitializeTables()` - migrate to proper migrations
+  - Move from `InitializeTables()` to `golang-migrate`
+  - Create schema for `projects` table
   
 - [ ] **Database Connection Pooling**:
   - Configure pool size for production load
-  - Set connection timeouts
-  - Monitor connection usage
-  
-- [ ] **Backup Strategy**:
-  - Automated daily backups
-  - Point-in-time recovery
-  - Test restore procedures
   
 - [ ] **Production Database**:
-  - Use managed PostgreSQL (AWS RDS, Google Cloud SQL, or Supabase)
-  - Enable SSL connections
-  - Configure proper access controls
+  - Switch to managed PostgreSQL (Neon/RDS)
 
 ### 3. Observability & Monitoring
 - [ ] **Structured Logging**:
-  - Replace `log.Printf` with structured logger (zerolog, zap)
-  - Add request IDs for tracing
-  - Log levels (DEBUG, INFO, WARN, ERROR)
-  - Example: `{"level":"info","request_id":"abc123","user_id":"user_1","msg":"checkout created"}`
+  - Replace `log.Printf` with `slog` (Go 1.21+) or `zap`
+  - Log `project_id` context for every request
   
-- [ ] **Metrics & Monitoring**:
-  - Prometheus metrics endpoint
-  - Track: request counts, latencies, error rates
-  - Monitor: checkout success rate, webhook processing
-  - Key metrics: `checkout_requests_total`, `webhook_failures_total`
-  
-- [ ] **Health Checks**:
-  - Expand `/health` to check database connectivity
-  - Check Stripe API reachability
-  - Return detailed status for k8s/orchestrator
-  
-- [ ] **Alerting**:
-  - Set up alerts for: high error rates, webhook failures, database issues
-  - Use PagerDuty, Opsgenie, or similar
-  - Alert on payment processing failures
+- [ ] **Metrics**:
+  - Track requests per project
+  - Monitor Stripe API latency
 
 ### 4. Error Handling & Resilience
-- [ ] **Graceful Shutdown**:
-  - Handle SIGTERM/SIGINT properly
-  - Drain in-flight requests
-  - Close database connections cleanly
-  
-- [ ] **Retry Logic**:
-  - Retry failed Stripe API calls with exponential backoff
-  - Idempotency keys for Stripe operations
-  - DLQ (Dead Letter Queue) for failed webhooks
-  
-- [ ] **Circuit Breakers**:
-  - Prevent cascading failures
-  - Fast-fail when Stripe is down
-  - Use `github.com/sony/gobreaker` or similar
-  
-- [ ] **Timeout Configuration**:
-  - HTTP client timeouts
-  - Database query timeouts
-  - Context deadlines for long operations
+- [ ] **Graceful Shutdown**: Handle SIGTERM/SIGINT
+- [ ] **Retry Logic**: Exponential backoff for Stripe calls
 
-### 5. Testing & Quality
-- [ ] **Integration Tests**:
-  - Test with Stripe test mode
-  - Mock webhook events
-  - Test full checkout flows
-  
-- [ ] **Load Testing**:
-  - Use `k6` or `vegeta`
-  - Test sustained load (1000 req/min)
-  - Test spike scenarios
-  - Identify bottlenecks
-  
-- [ ] **Security Scanning**:
-  - Run `gosec` for security issues
-  - Dependency vulnerability scanning (`govulncheck`)
-  - Container scanning if using Docker
+### 5. Deployment & Infrastructure
+- [ ] **Docker/Containerization**: Create Dockerfile
+- [ ] **CI/CD Pipeline**: GitHub Actions
+- [ ] **Multi-Tenant Architecture**:
+  - Ensure data isolation (Project A can't see Project B's subscriptions)
+  - Add `project_id` column to all tables (`subscriptions`, `customers`)
 
-### 6. Deployment & Infrastructure
-- [ ] **Docker/Containerization**:
-  ```dockerfile
-  FROM golang:1.21-alpine AS builder
-  WORKDIR /app
-  COPY . .
-  RUN go build -o billing-service cmd/server/main.go
-  
-  FROM alpine:latest
-  RUN apk --no-cache add ca-certificates
-  WORKDIR /root/
-  COPY --from=builder /app/billing-service .
-  CMD ["./billing-service"]
-  ```
-  
-- [ ] **Kubernetes/Cloud Deployment**:
-  - Deploy to: AWS ECS, Google Cloud Run, or Fly.io
-  - Horizontal Pod Autoscaling (HPA)
-  - Multi-region for high availability
-  - Example: `flyctl deploy` for Fly.io
-  
-- [ ] **CI/CD Pipeline**:
-  - GitHub Actions / GitLab CI
-  - Automated tests on PR
-  - Deploy to staging → production
-  - Rollback capability
-  
-- [ ] **Infrastructure as Code**:
-  - Terraform for cloud resources
-  - Version control infrastructure
-  - Separate prod/staging environments
+### 6. Documentation
+- [ ] **API Documentation**: Swagger/OpenAPI for the "Universal Payment API"
+- [ ] **Integration Guide**: "How to add Payment MS to your project"
 
 ### 7. Stripe-Specific Production Setup
 - [ ] **Webhook Endpoint Registration**:
