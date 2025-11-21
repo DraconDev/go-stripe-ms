@@ -4,9 +4,13 @@ import "fmt"
 
 // validateCartCheckoutRequest validates the cart checkout request
 func validateCartCheckoutRequest(req CartCheckoutRequest) error {
-	if req.UserID == "" || req.Email == "" || len(req.Items) == 0 ||
+	if req.UserID == "" || req.Email == "" ||
 		req.SuccessURL == "" || req.CancelURL == "" {
 		return fmt.Errorf("Missing required fields")
+	}
+
+	if len(req.Items) == 0 {
+		return fmt.Errorf("Cart cannot be empty")
 	}
 
 	// Validate cart items
