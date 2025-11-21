@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,7 +17,7 @@ import (
 func TestGetSubscriptionStatusIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		project, err := testDB.CreateTestData()
+		project, customer, err := testDB.CreateTestData()
 		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
@@ -31,9 +32,10 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 			expectedResponse   map[string]interface{}
 			expectedError      string
 		}{
+			// Note: path will be dynamically constructed in the test loop
 			{
 				name:               "Valid subscription request with real data",
-				path:               "/api/v1/subscriptions/test_user_123/premium_plan",
+				path:               "", // Will be set dynamically
 				expectedStatusCode: http.StatusOK,
 			},
 			{
@@ -54,8 +56,14 @@ func TestGetSubscriptionStatusIntegration(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// Dynamically set path for valid subscription test
+				path := tt.path
+				if path == "" {
+					path = fmt.Sprintf("/api/v1/subscriptions/%s/premium_plan", customer.UserID)
+				}
+
 				// Create request
-				req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+				req := httptest.NewRequest(http.MethodGet, path, nil)
 
 				// Inject project ID into context
 				ctx := context.WithValue(req.Context(), middleware.ProjectIDKey, project.ID)

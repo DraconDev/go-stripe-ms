@@ -4,11 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
-	"github.com/google/uuid"
 )
 
 // TestAPIKeyAuth_Middleware tests the API key authentication middleware
@@ -16,17 +14,12 @@ func TestAPIKeyAuth_Middleware(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Create a test project with a known API key
 		apiKey := "sk_test_auth_middleware"
-		project := &database.Project{
-			ID:        uuid.New(),
-			Name:      "Auth Test Project",
-			APIKey:    apiKey,
-			IsActive:  true,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+		// Setup test database with a known project
+		project, customer, err := testDB.CreateTestData()
+		if err != nil {
+			t.Fatalf("Failed to create test data: %v", err)
 		}
-		if err := testDB.CreateTestProject(project); err != nil {
-			t.Fatalf("Failed to create test project: %v", err)
-		}
+		_ = customer // Not needed for auth tests
 
 		authMiddleware := middleware.NewAPIKeyAuth(testDB.Repo)
 
