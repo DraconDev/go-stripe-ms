@@ -1,3 +1,4 @@
+```go
 package subscription
 
 import (
@@ -8,25 +9,19 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
+	"github.com/DraconDev/go-stripe-ms/internal/middleware"
+	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
 )
 
 // HandleSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
-func HandleSubscriptionStatus(db database.RepositoryInterface, w http.ResponseWriter, r *http.Request) {
+func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret string, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parse user_id and product_id from URL path
-	userID := r.URL.Path[len("/api/v1/subscriptions/"):]
-	if userID == "" {
-		http.Error(w, "User ID is required", http.StatusBadRequest)
-		return
-	}
-
-	parts := utils.SplitURLPath(userID)
 	if len(parts) != 2 {
 		http.Error(w, "Invalid URL format. Expected /api/v1/subscriptions/{user_id}/{product_id}", http.StatusBadRequest)
 		return
