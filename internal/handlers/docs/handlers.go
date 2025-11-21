@@ -39,16 +39,135 @@ func HandleOpenAPI(w http.ResponseWriter, r *http.Request) {
 			"description": "Stripe-based payment processing service with API key authentication",
 			"version":     "1.0.0",
 		},
-		"servers": []map[string]string{
+		"servers": []map[string]interface{}{
 			{"url": "http://localhost:9000", "description": "Local development"},
+			{"url": "https://your-production-url.com", "description": "Production"},
+		},
+		"components": map[string]interface{}{
+			"securitySchemes": map[string]interface{}{
+				"ApiKeyAuth": map[string]interface{}{
+					"type":        "apiKey",
+					"in":          "header",
+					"name":        "X-API-Key",
+					"description": "API key for authentication. Get this from your .env file (PAYMENT_MS_API_KEY)",
+				},
+			},
+			"schemas": map[string]interface{}{
+				"SubscriptionCheckoutRequest": map[string]interface{}{
+					"type":     "object",
+					"required": []string{"user_id", "email", "product_id", "price_id", "success_url", "cancel_url"},
+					"properties": map[string]interface{}{
+						"user_id":     map[string]interface{}{"type": "string", "example": "user_123"},
+						"email":       map[string]interface{}{"type": "string", "format": "email", "example": "customer@example.com"},
+						"product_id":  map[string]interface{}{"type": "string", "example": "prod_RZaVDAN6Uf4Qfb"},
+						"price_id":    map[string]interface{}{"type": "string", "example": "price_1QhEBSFhH6dwUiIH"},
+						"success_url": map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/success"},
+						"cancel_url":  map[string]interface{}{"type": "string", "format": "uri", "example": "https://yourapp.com/cancel"},
+					},
+				},
+				"CheckoutResponse": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"checkout_session_id": map[string]interface{}{"type": "string", "example": "cs_test_a1b2c3d4"},
+						"checkout_url":        map[string]interface{}{"type": "string", "format": "uri", "example": "https://checkout.stripe.com/c/pay/cs_test_..."},
+					},
+				},
+				"SubscriptionStatusResponse": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"status":             map[string]interface{}{"type": "string", "example": "active"},
+						"subscription_id":    map[string]interface{}{"type": "string", "example": "sub_1QhEBS..."},
+						"current_period_end": map[string]interface{}{"type": "string", "format": "date-time", "example": "2025-12-21T10:00:00Z"},
+						"product_id":         map[string]interface{}{"type": "string", "example": "prod_RZaVDAN6Uf4Qfb"},
+					},
+				},
+			},
+		},
+		"security": []map[string][]string{
+			{"ApiKeyAuth": {}},
 		},
 		"paths": map[string]interface{}{
-			"/health":                       map[string]interface{}{"get": map[string]string{"summary": "Health check"}},
-			"/docs":                         map[string]interface{}{"get": map[string]string{"summary": "API documentation"}},
-			"/api/v1/checkout/subscription": map[string]interface{}{"post": map[string]string{"summary": "Create subscription checkout"}},
-			"/api/v1/checkout/item":         map[string]interface{}{"post": map[string]string{"summary": "Create item checkout"}},
-			"/api/v1/checkout/cart":         map[string]interface{}{"post": map[string]string{"summary": "Create cart checkout"}},
-			"/api/v1/subscriptions/{user_id}/{product_id}": map[string]interface{}{"get": map[string]string{"summary": "Get subscription status"}},
+			"/health": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":  "Health check",
+					"security": []map[string][]string{}, // No auth required
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Service is healthy",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"example": map[string]interface{}{
+										"status":    "healthy",
+										"timestamp": "2025-11-21T10:00:00Z",
+										"service":   "billing-service",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"/docs": map[string]interface{}{"get": map[string]string{"summary": "API documentation"}},
+			"/api/v1/checkout/subscription": map[string]interface{}{
+				"post": map[string]interface{}{
+					"summary":     "Create subscription checkout",
+					"description": "Creates a Stripe checkout session for a subscription",
+					"requestBody": map[string]interface{}{
+						"required": true,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": map[string]string{"$ref": "#/components/schemas/SubscriptionCheckoutRequest"},
+							},
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Checkout session created successfully",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]string{"$ref": "#/components/schemas/CheckoutResponse"},
+								},
+							},
+						},
+						"401": map[string]interface{}{"description": "Missing or invalid API key"},
+						"400": map[string]interface{}{"description": "Invalid request body"},
+					},
+				},
+			},
+			"/api/v1/checkout/item": map[string]interface{}{"post": map[string]string{"summary": "Create item checkout"}},
+			"/api/v1/checkout/cart": map[string]interface{}{"post": map[string]string{"summary": "Create cart checkout"}},
+			"/api/v1/subscriptions/{user_id}/{product_id}": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary":     "Get subscription status",
+					"description": "Get the subscription status for a user and product",
+					"parameters": []map[string]interface{}{
+						{
+							"name":        "user_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "User identifier",
+						},
+						{
+							"name":        "product_id",
+							"in":          "path",
+							"required":    true,
+							"schema":      map[string]string{"type": "string"},
+							"description": "Stripe product ID",
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Subscription status",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]string{"$ref": "#/components/schemas/SubscriptionStatusResponse"},
+								},
+							},
+						},
+					},
+				},
+			},
 			"/api/v1/portal": map[string]interface{}{"post": map[string]string{"summary": "Create customer portal"}},
 		},
 	}
@@ -100,7 +219,7 @@ pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; overflow-x: auto; bord
 <div class="header-auth">
 <strong>Authentication Required:</strong> All <code>/api/v1/*</code> endpoints require the <code>X-API-Key</code> header.
 <br><br>
-<code>X-API-Key: your_api_key_here</code>
+<code>X-API-Key: &lt;value from your PAYMENT_MS_API_KEY env variable&gt;</code>
 </div>
 
 <h2>Public Endpoints</h2>
