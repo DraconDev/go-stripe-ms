@@ -11,27 +11,42 @@ import (
 
 // autoLoadEnv automatically loads environment variables from .env files
 func autoLoadEnv() {
-	// Try multiple locations for .env file
-	envFiles := []string{
-		".env",
-		".env.local",
+	// Start from current directory
+	dir, err := os.Getwd()
+	if err != nil {
+		return
 	}
-	
-	// Also check if we're running from a subdirectory
-	if cwd, err := os.Getwd(); err == nil {
-		// Try relative paths from current working directory
-		relativePaths := []string{
-			filepath.Join(cwd, ".env"),
-			filepath.Join(cwd, ".env.local"),
+
+	// Traverse up the directory tree
+	for {
+		// Check for .env files in current directory
+		envFiles := []string{
+			filepath.Join(dir, ".env"),
+			filepath.Join(dir, ".env.local"),
 		}
-		envFiles = append(envFiles, relativePaths...)
-	}
-	
-	for _, envFile := range envFiles {
-		if err := loadEnvFile(envFile); err == nil {
-			log.Printf("Loaded environment from: %s", envFile)
+
+		found := false
+		for _, envFile := range envFiles {
+			if err := loadEnvFile(envFile); err == nil {
+				log.Printf("Loaded environment from: %s", envFile)
+				found = true
+			}
+		}
+
+		if found {
+			// If we found env files, we can stop searching up
+			// Or we might want to continue if we want to support cascading configs
+			// For now, let's stop as usually .env is at root
 			break
 		}
+
+		// Move to parent directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root
+			break
+		}
+		dir = parent
 	}
 }
 
@@ -55,13 +70,13 @@ func loadEnvFile(envFilePath string) error {
 		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		
+
 		// Remove quotes if present
 		if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
-		   (strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+			(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
 			value = value[1 : len(value)-1]
 		}
-		
+
 		// Only set if not already set (preserve existing environment)
 		if _, exists := os.LookupEnv(key); !exists {
 			os.Setenv(key, value)
