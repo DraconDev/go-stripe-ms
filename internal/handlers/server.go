@@ -73,7 +73,7 @@ func (s *HTTPServer) CreateSubscriptionCheckout(w http.ResponseWriter, r *http.R
 
 // GetSubscriptionStatus handles GET /api/v1/subscriptions/{user_id}/{product_id}
 func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Request) {
-	subscription.HandleSubscriptionStatus(s.db, w, r)
+	subscription.HandleSubscriptionStatus(s.db, s.stripeSecret, w, r)
 }
 
 // CreateCustomerPortal handles POST /api/v1/portal
