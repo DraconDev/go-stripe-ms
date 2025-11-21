@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,21 +64,29 @@ func ScanProject(row pgx.Row) (*Project, error) {
 	return &project, nil
 }
 
-// ScanCustomer scans a database row into a Customer struct
+// ScanCustomer scans a customer row from the database
 func ScanCustomer(row pgx.Row) (*Customer, error) {
 	var customer Customer
+	var stripeCustomerID sql.NullString
+
 	err := row.Scan(
 		&customer.ID,
 		&customer.ProjectID,
 		&customer.UserID,
 		&customer.Email,
-		&customer.StripeCustomerID,
+		&stripeCustomerID,
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Convert sql.NullString to string
+	if stripeCustomerID.Valid {
+		customer.StripeCustomerID = stripeCustomerID.String
+	}
+
 	return &customer, nil
 }
 
