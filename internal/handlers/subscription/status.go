@@ -9,7 +9,6 @@ import (
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/utils"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
-	"github.com/gorilla/mux"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/sub"
 )
@@ -21,9 +20,17 @@ func HandleSubscriptionStatus(db database.RepositoryInterface, stripeSecret stri
 		return
 	}
 
-	vars := mux.Vars(r)
-	userID := vars["user_id"]
-	productID := vars["product_id"]
+	// Parse user_id and product_id from URL path
+	path := r.URL.Path[len("/api/v1/subscriptions/"):]
+	parts := utils.SplitURLPath(path)
+
+	if len(parts) != 2 {
+		http.Error(w, "Invalid URL format. Expected /api/v1/subscriptions/{user_id}/{product_id}", http.StatusBadRequest)
+		return
+	}
+
+	userID := parts[0]
+	productID := parts[1]
 
 	if userID == "" || productID == "" {
 		http.Error(w, "Missing user_id or product_id", http.StatusBadRequest)
