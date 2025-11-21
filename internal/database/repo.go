@@ -43,50 +43,37 @@ func NewRepository(db *pgx.Conn) *Repository {
 }
 
 // GetSubscriptionStatus retrieves subscription status for a user/product
-func (r *Repository) GetSubscriptionStatus(ctx context.Context, userID, productID string) (string, string, time.Time, bool, error) {
+func (r *Repository) GetSubscriptionStatus(ctx context.Context, projectID uuid.UUID, userID, productID string) (string, string, time.Time, bool, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT 
 			stripe_subscription_id,
 			customer_id,
 			status,
-			current_period_end,
-			true as exists
+			current_period_end
 		FROM subscriptions 
-		WHERE user_id = $1 AND product_id = $2
-	`, userID, productID)
+		WHERE project_id = $1 AND user_id = $2 AND product_id = $3
+	`, projectID, userID, productID)
 
 	return ScanSubscriptionStatus(row)
 }
 
-// CreateSubscription creates a new subscription record
-func (r *Repository) CreateSubscription(ctx context.Context, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error {
-	ID := uuid.New()
-
-	// Get customer database ID
-	var customerDBID uuid.UUID
-	err := r.db.QueryRow(ctx, `
-		SELECT id 
-		FROM customers 
-		WHERE stripe_customer_id = $1
-	`, customerID).Scan(&customerDBID)
-
-	if err != nil {
-		return err
-	}
-
-	_, err = r.db.Exec(ctx, `
+// CreateSubscription creates or updates a subscription
+func (r *Repository) CreateSubscription(ctx context.Context, projectID uuid.UUID, customerID, stripeSubID, productID, priceID, userID, status string, periodStart, periodEnd time.Time) error {
+	_, err := r.db.Exec(ctx, `
 		INSERT INTO subscriptions (
-			id, customer_id, user_id, product_id, price_id,
+			project_id, customer_id, user_id, product_id, price_id,
 			stripe_subscription_id, status, current_period_start, current_period_end,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		ON CONFLICT (user_id, product_id) DO UPDATE SET
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+		)
+		ON CONFLICT (project_id, user_id, product_id) DO UPDATE SET
 			stripe_subscription_id = EXCLUDED.stripe_subscription_id,
 			status = EXCLUDED.status,
 			current_period_start = EXCLUDED.current_period_start,
 			current_period_end = EXCLUDED.current_period_end,
 			updated_at = EXCLUDED.updated_at
-	`, ID, customerDBID, userID, productID, priceID, stripeSubID, status, periodStart, periodEnd, time.Now(), time.Now())
+	`, projectID, customerID, userID, productID, priceID, stripeSubID, status, periodStart, periodEnd, time.Now(), time.Now())
 
 	return err
 }
@@ -111,6 +98,15 @@ func (r *Repository) GetSubscriptionByStripeID(ctx context.Context, stripeSubID 
 		FROM subscriptions 
 		WHERE stripe_subscription_id = $1
 	`, stripeSubID))
+}
+
+// GetCustomerByUserID retrieves a customer by User ID
+func (r *Repository) GetCustomerByUserID(ctx context.Context, projectID uuid.UUID, userID string) (*Customer, error) {
+	return ScanCustomer(r.db.QueryRow(ctx, `
+		SELECT id, project_id, user_id, email, stripe_customer_id, created_at, updated_at
+		FROM customers 
+		WHERE project_id = $1 AND user_id = $2
+	`, projectID, userID))
 }
 
 // InitializeTables creates the necessary database tables
