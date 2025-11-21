@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/DraconDev/go-stripe-ms/internal/database"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers"
 	"github.com/DraconDev/go-stripe-ms/internal/middleware"
@@ -34,25 +35,23 @@ func TestCreateItemCheckoutIntegration(t *testing.T) {
 			requestBody        map[string]interface{}
 			expectedStatusCode int
 			expectedError      string
+			setupAuth          bool
 		}{
 			{
 				name: "Valid item checkout request",
 				requestBody: map[string]interface{}{
-					"user_id":     "test_user_123",
-					"email":       "test@example.com",
-					"product_id":  "prod_test123",
-					"price_id":    "price_test123",
+					"price_id":    config.TEST_PRICE_ID, // Use real test price from constants
 					"quantity":    1,
-					"success_url": "https://example.com/success",
-					"cancel_url":  "https://example.com/cancel",
+					"user_id":     "test_user_123",
+					"success_url": "http://localhost:3000/success",
+					"cancel_url":  "http://localhost:3000/cancel",
 				},
 				expectedStatusCode: http.StatusOK,
+				setupAuth:          true,
 			},
 			{
 				name: "Valid item checkout request with default quantity",
 				requestBody: map[string]interface{}{
-					"user_id":  "test_user_123",
-					"email":    "test@example.com",
 					"price_id": "price_test123",
 					// quantity omitted, should default to 1
 					"success_url": "https://example.com/success",
