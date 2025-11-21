@@ -107,8 +107,8 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/health", s.apiServer.HealthCheck)
 
 	// API Documentation endpoints (public)
-	mux.HandleFunc("/openapi.json", s.openAPIHandler)
-	mux.HandleFunc("/docs", s.docsHandler)
+	mux.HandleFunc("/openapi.json", s.apiServer.OpenAPIHandler)
+	mux.HandleFunc("/docs", s.apiServer.DocsHandler)
 
 	// Webhook endpoint (authenticated by Stripe signature, not API key)
 	s.webhookHandler.SetupRoutes(mux)
@@ -132,7 +132,7 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 		env = "development"
 	}
 	if env != "production" {
-		mux.HandleFunc("/debug", s.debugHandler)
+		mux.HandleFunc("/debug", s.apiServer.DebugHandler)
 	}
 }
 
