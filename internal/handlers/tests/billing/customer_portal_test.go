@@ -17,10 +17,11 @@ import (
 func TestCreateCustomerPortalIntegration(t *testing.T) {
 	database.WithTestDatabase(t, func(t *testing.T, testDB *database.TestDatabase) {
 		// Setup test data
-		project, err := testDB.CreateTestData()
+		project, customer, err := testDB.CreateTestData()
 		if err != nil {
 			t.Fatalf("Failed to create test data: %v", err)
 		}
+		_ = customer // Will be used in future tests
 
 		// Create HTTP server with real database
 		server := handlers.NewHTTPServer(testDB.Repo, "sk_test_123")
