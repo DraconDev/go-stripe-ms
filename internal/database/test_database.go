@@ -1,3 +1,4 @@
+```go
 package database
 
 import (
@@ -10,12 +11,12 @@ import (
 
 	"github.com/DraconDev/go-stripe-ms/internal/config"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // TestDatabase manages database testing with real PostgreSQL
 type TestDatabase struct {
-	Conn *pgx.Conn
+	Conn *pgxpool.Pool
 	Repo *Repository
 	ctx  context.Context
 }
