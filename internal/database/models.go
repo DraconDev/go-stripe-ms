@@ -46,6 +46,23 @@ type Subscription struct {
 	UpdatedAt            time.Time `json:"updated_at"`
 }
 
+// RegisteredProduct represents a product registered for a project
+type RegisteredProduct struct {
+	ID                 uuid.UUID `json:"id"`
+	ProjectName        string    `json:"project_name"`
+	PlanName           string    `json:"plan_name"`
+	StripeProductID    string    `json:"stripe_product_id"`
+	StripePriceMonthly string    `json:"stripe_price_monthly,omitempty"`
+	StripePriceYearly  string    `json:"stripe_price_yearly,omitempty"`
+	MonthlyAmount      int64     `json:"monthly_amount,omitempty"`
+	YearlyAmount       int64     `json:"yearly_amount,omitempty"`
+	Currency           string    `json:"currency"`
+	Description        string    `json:"description,omitempty"`
+	Features           []byte    `json:"features,omitempty"` // JSON bytes
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
 // ScanProject scans a database row into a Project struct
 func ScanProject(row pgx.Row) (*Project, error) {
 	var project Project
@@ -111,6 +128,47 @@ func ScanSubscription(row pgx.Row) (*Subscription, error) {
 		return nil, err
 	}
 	return &sub, nil
+}
+
+// ScanRegisteredProduct scans a database row into a RegisteredProduct struct
+func ScanRegisteredProduct(row pgx.Row) (*RegisteredProduct, error) {
+	var product RegisteredProduct
+	var monthlyAmount, yearlyAmount sql.NullInt64
+	var stripePriceMonthly, stripePriceYearly sql.NullString
+
+	err := row.Scan(
+		&product.ID,
+		&product.ProjectName,
+		&product.PlanName,
+		&product.StripeProductID,
+		&stripePriceMonthly,
+		&stripePriceYearly,
+		&monthlyAmount,
+		&yearlyAmount,
+		&product.Currency,
+		&product.Description,
+		&product.Features,
+		&product.CreatedAt,
+		&product.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if stripePriceMonthly.Valid {
+		product.StripePriceMonthly = stripePriceMonthly.String
+	}
+	if stripePriceYearly.Valid {
+		product.StripePriceYearly = stripePriceYearly.String
+	}
+	if monthlyAmount.Valid {
+		product.MonthlyAmount = monthlyAmount.Int64
+	}
+	if yearlyAmount.Valid {
+		product.YearlyAmount = yearlyAmount.Int64
+	}
+
+	return &product, nil
 }
 
 // ScanSubscriptionStatus scans a database row into subscription status fields
