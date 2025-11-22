@@ -121,6 +121,9 @@ func (s *Server) setupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/v1/subscriptions/{user_id}/{product_id}", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.GetSubscriptionStatus)))
 	mux.Handle("/api/v1/portal", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.CreateCustomerPortal)))
 
+	// Admin endpoints (protected by same API key)
+	mux.Handle("/admin/products/register", authMiddleware.Middleware(http.HandlerFunc(s.apiServer.RegisterProducts)))
+
 	// Debug endpoint (development only)
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" {

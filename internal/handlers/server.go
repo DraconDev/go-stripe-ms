@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/DraconDev/go-stripe-ms/internal/database"
+	"github.com/DraconDev/go-stripe-ms/internal/handlers/admin"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/billing"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/cart"
 	"github.com/DraconDev/go-stripe-ms/internal/handlers/core"
@@ -79,4 +80,9 @@ func (s *HTTPServer) GetSubscriptionStatus(w http.ResponseWriter, r *http.Reques
 // CreateCustomerPortal handles POST /api/v1/portal
 func (s *HTTPServer) CreateCustomerPortal(w http.ResponseWriter, r *http.Request) {
 	billing.HandleCustomerPortal(s.db, s.stripeSecret, w, r)
+}
+
+// RegisterProducts handles POST /admin/products/register
+func (s *HTTPServer) RegisterProducts(w http.ResponseWriter, r *http.Request) {
+	admin.HandleProductRegistration(s.db, s.stripeSecret, w, r)
 }
