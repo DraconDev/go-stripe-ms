@@ -83,13 +83,19 @@ func (td *TestDatabase) Cleanup(t *testing.T) {
 	t.Helper()
 
 	if td.Conn != nil {
-		// Clean up test data by truncating tables in reverse dependency order
-		// This ensures foreign key constraints are respected
-		_, err := td.Conn.Exec(td.ctx, `
-			TRUNCATE TABLE subscriptions, customers, projects CASCADE;
-		`)
-		if err != nil {
-			t.Logf("Warning: failed to clean up test data: %v", err)
+		// Clean up test data in reverse dependency order
+		cleanupQueries := []string{
+			"TRUNCATE TABLE subscriptions CASCADE",
+			"TRUNCATE TABLE customers CASCADE",
+			"TRUNCATE TABLE registered_products CASCADE",
+			"TRUNCATE TABLE projects CASCADE",
+		}
+
+		for _, query := range cleanupQueries {
+			_, err := td.Conn.Exec(td.ctx, query)
+			if err != nil {
+				t.Logf("Warning: failed to clean up data with query '%s': %v", query, err)
+			}
 		}
 
 		td.Conn.Close(td.ctx)
