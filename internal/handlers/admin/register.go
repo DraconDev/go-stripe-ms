@@ -83,9 +83,7 @@ func createStripeProducts(ctx context.Context, req ProductRegistrationRequest) (
 
 	for _, plan := range req.Plans {
 		// Create Stripe Product
-		productParams := &stripe.Product
-
-		Params{
+		productParams := &stripe.ProductParams{
 			Name:        stripe.String(fmt.Sprintf("%s - %s", req.ProjectName, plan.Name)),
 			Description: stripe.String(plan.Description),
 		}
@@ -118,11 +116,6 @@ func createStripeProducts(ctx context.Context, req ProductRegistrationRequest) (
 				Recurring: &stripe.PriceRecurringParams{
 					Interval: stripe.String("month"),
 				},
-				Metadata: map[string]string{
-					"project_name": req.ProjectName,
-					"plan_name":    plan.Name,
-					"interval":     "monthly",
-				},
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create monthly price for plan '%s': %w", plan.Name, err)
@@ -144,11 +137,6 @@ func createStripeProducts(ctx context.Context, req ProductRegistrationRequest) (
 				Currency:   stripe.String("usd"),
 				Recurring: &stripe.PriceRecurringParams{
 					Interval: stripe.String("year"),
-				},
-				Metadata: map[string]string{
-					"project_name": req.ProjectName,
-					"plan_name":    plan.Name,
-					"interval":     "yearly",
 				},
 			})
 			if err != nil {
