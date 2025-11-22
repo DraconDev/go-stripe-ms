@@ -22,6 +22,12 @@ type RepositoryInterface interface {
 	UpdateSubscriptionStatus(ctx context.Context, stripeSubID, status string, periodEnd time.Time) error
 	GetSubscriptionByStripeID(ctx context.Context, stripeSubID string) (*Subscription, error)
 
+	// Registered products operations
+	CreateRegisteredProduct(ctx context.Context, product *RegisteredProduct) error
+	GetRegisteredProductsByProject(ctx context.Context, projectName string) ([]*RegisteredProduct, error)
+	ProductExistsForProject(ctx context.Context, projectName, planName string) (bool, string, error)
+	GetRegisteredProductByStripeID(ctx context.Context, stripeProductID string) (*RegisteredProduct, error)
+
 	// Project operations
 	CreateProject(ctx context.Context, name, webhookURL string) (*Project, error)
 	GetProjectByAPIKey(ctx context.Context, apiKey string) (*Project, error)
