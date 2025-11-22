@@ -55,12 +55,19 @@ func NewTestDatabase(t *testing.T) *TestDatabase {
 func (td *TestDatabase) Setup(t *testing.T) {
 	t.Helper()
 
-	// Clean up any leftover test data first
-	_, err := td.Conn.Exec(td.ctx, `
-		TRUNCATE TABLE subscriptions, customers, projects CASCADE;
-	`)
-	if err != nil {
-		t.Logf("Warning: failed to clean up existing data: %v", err)
+	// Clean up test data in reverse dependency order
+	cleanupQueries := []string{
+		"TRUNCATE TABLE subscriptions CASCADE",
+		"TRUNCATE TABLE customers CASCADE",
+		"TRUNCATE TABLE registered_products CASCADE",
+		"TRUNCATE TABLE projects CASCADE",
+	}
+
+	for _, query := range cleanupQueries {
+		_, err := td.Conn.Exec(td.ctx, query)
+		if err != nil {
+			t.Logf("Warning: failed to clean up existing data with query '%s': %v", query, err)
+		}
 	}
 
 	// Initialize database tables
