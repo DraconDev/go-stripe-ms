@@ -24,13 +24,13 @@ func HandleProductRegistration(db database.RepositoryInterface, stripeSecret str
 	// Parse request
 	var req ProductRegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "INVALID_JSON", "Failed to parse request body", err.Error())
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "INVALID_JSON", "Failed to parse request body", err.Error(), "", "", "")
 		return
 	}
 
 	// Validate request
 	if err := validateProductRequest(&req); err != nil {
-		utils.WriteErrorResponse(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), "")
+		utils.WriteErrorResponse(w, http.StatusBadRequest, "invalid_request", "VALIDATION_ERROR", err.Error(), "", "", "", "")
 		return
 	}
 
@@ -38,7 +38,7 @@ func HandleProductRegistration(db database.RepositoryInterface, stripeSecret str
 	for _, plan := range req.Plans {
 		exists, existingProductID, err := db.ProductExistsForProject(ctx, req.ProjectName, plan.Name)
 		if err != nil {
-			utils.WriteErrorResponse(w, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to check existing products", err.Error())
+			utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "DATABASE_ERROR", "Failed to check existing products", err.Error(), "", "", "")
 			return
 		}
 		if exists {
@@ -51,7 +51,7 @@ func HandleProductRegistration(db database.RepositoryInterface, stripeSecret str
 	products, err := createStripeProducts(ctx, req)
 	if err != nil {
 		log.Printf("Failed to create Stripe products: %v", err)
-		utils.WriteErrorResponse(w, http.StatusInternalServerError, "STRIPE_ERROR", "Failed to create products in Stripe", err.Error())
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "stripe_error", "STRIPE_ERROR", "Failed to create products in Stripe", err.Error(), "", "", "")
 		return
 	}
 
@@ -60,7 +60,7 @@ func HandleProductRegistration(db database.RepositoryInterface, stripeSecret str
 		log.Printf("Failed to store products in database: %v", err)
 		// Rollback Stripe products
 		rollbackStripeProducts(products)
-		utils.WriteErrorResponse(w, http.StatusInternalServerError, "DATABASE_ERROR", "Failed to store products", err.Error())
+		utils.WriteErrorResponse(w, http.StatusInternalServerError, "internal_error", "DATABASE_ERROR", "Failed to store products", err.Error(), "", "", "")
 		return
 	}
 
