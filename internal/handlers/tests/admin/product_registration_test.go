@@ -125,20 +125,73 @@ func TestProductRegistrationIntegration(t *testing.T) {
 				}
 
 				// For successful creation, verify response structure
-				if tt.expectedStatusCode == http.StatusCreated {
-					var response map[string]interface{}
-					if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-						t.Errorf("Failed to unmarshal response: %v", err)
-					}
-
-					if success, ok := response["success"].(bool); !ok || !success {
-						t.Errorf("Expected success=true in response")
-					}
-
-					if products, ok := response["products"].([]interface{}); !ok || len(products) == 0 {
-						t.Error("Expected products array in response")
-					}
+			if tt.expectedStatusCode == http.StatusCreated {
+				var response map[string]interface{}
+				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+					t.Errorf("Failed to unmarshal response: %v", err)
+					return
 				}
+
+				// Verify success field
+				if success, ok := response["success"].(bool); !ok || !success {
+					t.Errorf("Expected success=true in response, got: %v", response)
+					return
+				}
+
+				// Verify project_id field
+				if projectID, ok := response["project_id"].(string); !ok || projectID != "test-project" {
+					t.Errorf("Expected project_id='test-project', got: %v", response["project_id"])
+				}
+
+				// Verify products array
+				products, ok := response["products"].([]interface{})
+				if !ok || len(products) == 0 {
+					t.Error("Expected products array in response")
+					return
+				}
+
+				// Verify first product structure
+				product := products[0].(map[string]interface{})
+				
+				if planName, ok := product["plan_name"].(string); !ok || planName != "Pro Plan" {
+					t.Errorf("Expected plan_name='Pro Plan', got: %v", product["plan_name"])
+				}
+
+				if stripeProductID, ok := product["stripe_product_id"].(string); !ok || stripeProductID == "" {
+					t.Error("Expected non-empty stripe_product_id")
+				}
+
+				// Verify prices structure
+				prices, ok := product["prices"].(map[string]interface{})
+				if !ok {
+					t.Error("Expected prices object in product")
+					return
+				}
+
+				// Verify monthly price
+				if monthly, ok := prices["monthly"].(map[string]interface{}); ok {
+					if priceID, ok := monthly["stripe_price_id"].(string); !ok || priceID == "" {
+						t.Error("Expected non-empty monthly stripe_price_id")
+					}
+					if amount, ok := monthly["amount"].(float64); !ok || amount != 2900 {
+						t.Errorf("Expected monthly amount=2900, got: %v", monthly["amount"])
+					}
+				} else {
+					t.Error("Expected monthly price in response")
+				}
+
+				// Verify yearly price
+				if yearly, ok := prices["yearly"].(map[string]interface{}); ok {
+					if priceID, ok := yearly["stripe_price_id"].(string); !ok || priceID == "" {
+						t.Error("Expected non-empty yearly stripe_price_id")
+					}
+					if amount, ok := yearly["amount"].(float64); !ok || amount != 29000 {
+						t.Errorf("Expected yearly amount=29000, got: %v", yearly["amount"])
+					}
+				} else {
+					t.Error("Expected yearly price in response")
+				}
+			}	}
 			})
 		}
 	})
