@@ -150,6 +150,23 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 			UNIQUE(project_id, user_id, product_id)
 		)`,
 
+		`CREATE TABLE IF NOT EXISTS registered_products (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			project_name VARCHAR(255) NOT NULL,
+			plan_name VARCHAR(255) NOT NULL,
+			stripe_product_id VARCHAR(255) NOT NULL UNIQUE,
+			stripe_price_monthly VARCHAR(255),
+			stripe_price_yearly VARCHAR(255),
+			monthly_amount INT,
+			yearly_amount INT,
+			currency VARCHAR(10) DEFAULT 'usd',
+			description TEXT,
+			features JSONB,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			UNIQUE(project_name, plan_name)
+		)`,
+
 		// Indexes
 		`CREATE INDEX IF NOT EXISTS idx_projects_api_key ON projects(api_key)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_project_id ON customers(project_id)`,
@@ -159,6 +176,8 @@ func (r *Repository) InitializeTables(ctx context.Context) error {
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_id ON subscriptions(stripe_subscription_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_product_id ON subscriptions(product_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_registered_products_project ON registered_products(project_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_registered_products_stripe_id ON registered_products(stripe_product_id)`,
 	}
 
 	for _, query := range queries {
